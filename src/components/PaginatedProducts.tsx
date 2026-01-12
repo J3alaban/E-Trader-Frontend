@@ -6,7 +6,8 @@ import { Product } from "../models/Product";
 interface Props {
     products: Product[];
     isLoading: boolean;
-    initialRows?: number; // скільки рядків показувати спочатку (за замовчуванням 5)
+    initialRows?: number; 
+    
 }
 
 const getColumnsForWidth = (width: number) => {
@@ -16,21 +17,24 @@ const getColumnsForWidth = (width: number) => {
     if (width >= 1024) return 3; // lg
     if (width >= 768) return 2; // md
     return 1; // sm і менше
+    
 };
 
 const PaginatedProducts: FC<Props> = ({ products, isLoading, initialRows = 5 }) => {
     const [rowsToShow, setRowsToShow] = useState<number>(initialRows);
     const [columns, setColumns] = useState<number>(() =>
         typeof window !== "undefined" ? getColumnsForWidth(window.innerWidth) : 4
-    );
 
+    );
+   
     useEffect(() => {
         const handleResize = () => {
             setColumns(getColumnsForWidth(window.innerWidth));
+    console.log("Mevcut Products : " + products);
         };
         if (typeof window !== "undefined") {
             window.addEventListener("resize", handleResize);
-            // викличемо один раз, щоб впевнитися у правильних колонках
+          
             handleResize();
         }
         return () => {
@@ -38,13 +42,13 @@ const PaginatedProducts: FC<Props> = ({ products, isLoading, initialRows = 5 }) 
         };
     }, []);
 
-    // Скільки елементів показувати зараз
+
     const itemsPerPage = useMemo(() => rowsToShow * columns, [rowsToShow, columns]);
 
     const visibleProducts = products.slice(0, itemsPerPage);
     const allShown = visibleProducts.length >= products.length;
 
-    // клас сітки залишаємо як у вас, щоб стилі відповідали Tailwind breakpoints
+    
     return (
         <>
             {isLoading ? (
@@ -63,9 +67,9 @@ const PaginatedProducts: FC<Props> = ({ products, isLoading, initialRows = 5 }) 
                         <div className="flex justify-center mt-6">
                             <button
                                 onClick={() => setRowsToShow((r) => r + initialRows)}
-                                className="px-4 py-2 rounded-md border dark:border-neutral-700 dark:text-white hover:shadow"
+                                className="px-4 py-2 rounded-md border dark:border-neutral-700 dark:text-white hover:shadow bg-blue-300"
                             >
-                                View more
+                             View More
                             </button>
                         </div>
                     )}

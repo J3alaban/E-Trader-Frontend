@@ -7,21 +7,24 @@ import {
 } from "react-icons/md";
 import { doLogout } from "../redux/features/authSlice";
 import { Link } from "react-router-dom";
+import { useContext } from "react";
+import { AuthContext } from "../redux/AuthContext";
 
 const CustomPopup: FC = () => {
   const dispatch = useAppDispatch();
   const [isVisible, setVisible] = useState(false);
   const username = useAppSelector((state) => state.authReducer.username);
-
+const { setToken } = useContext(AuthContext)!;
   const handlePopup = () => {
     setVisible((v) => !v);
   };
 
-  const handleLogout = () => {
-    dispatch(doLogout());
-    hidePopup();
-  };
-
+const handleLogout = () => {
+  localStorage.clear();   // token, role, userId
+  setToken(null);         // JWT düşer
+  dispatch(doLogout());   // redux temizlenir
+  hidePopup();
+};
   const hidePopup = () => {
     setVisible(false);
   };
@@ -29,7 +32,7 @@ const CustomPopup: FC = () => {
   return (
     <div className="relative font-karla">
       <div
-        className="inline-block cursor-pointer hover:opacity-85 dark:text-white"
+        className="inline-block cursor-pointer hover:opacity-85 dark:text-white  "
         onClick={handlePopup}
         data-test="username-popup"
       >
@@ -48,7 +51,7 @@ const CustomPopup: FC = () => {
                 </td>
                 <td className="hover:underline cursor-pointer text-lg pl-2">
                   <Link to="/account" onClick={hidePopup}>
-                    Account
+            Hesabım
                   </Link>
                 </td>
               </tr>
@@ -61,7 +64,7 @@ const CustomPopup: FC = () => {
                   data-test="wishlist-container"
                 >
                   <Link to="/wishlist" onClick={hidePopup}>
-                    Wishlist
+                    Favorilerim
                   </Link>
                 </td>
               </tr>
@@ -74,7 +77,7 @@ const CustomPopup: FC = () => {
                   onClick={handleLogout}
                   data-test="logout-btn"
                 >
-                  Logout
+                  Çıkış Yap
                 </td>
               </tr>
             </tbody>

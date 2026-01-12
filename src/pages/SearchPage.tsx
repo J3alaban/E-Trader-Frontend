@@ -1,136 +1,117 @@
 import { FC, useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { Product } from "../models/Product";
-import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { updateLoading } from "../redux/features/homeSlice";
+import { /*useAppDispatch,*/ useAppSelector } from "../redux/hooks";
+ // import { updateLoading } from "../redux/features/homeSlice";
 import SortProducts from "../components/SortProducts";
 import PaginatedProducts from "../components/PaginatedProducts";
 
+
 interface Category {
-    slug: string;
-    name: string;
-    url: string;
+  id: number;
+  name: string;
+  slug: string;
 }
 
 const SearchPage: FC = () => {
-    const [searchParams] = useSearchParams();
-    const query = searchParams.get("q") || "";
-    const [products, setProducts] = useState<Product[]>([]);
-    const [categoryResults, setCategoryResults] = useState<Category[]>([]);
-    const [notFound, setNotFound] = useState(false);
-    const dispatch = useAppDispatch();
-    const isLoading = useAppSelector((state) => state.homeReducer.isLoading);
-    const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const query = (searchParams.get("q") || "").toLowerCase();
 
-    useEffect(() => {
-        const searchProducts = async () => {
-            if (!query) {
-                setNotFound(true);
-                return;
-            }
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categoryResults, setCategoryResults] = useState<Category[]>([]);
+  const [notFound, setNotFound] = useState(false);
 
-            dispatch(updateLoading(true));
-            setNotFound(false);
+  //  const dispatch = useAppDispatch();
+  const isLoading = useAppSelector((state) => state.homeReducer.isLoading);
+  const navigate = useNavigate();
 
-            try {
-                const productsResponse = await fetch(
-                    `https://dummyjson.com/products/search?q=${encodeURIComponent(query)}`
-                );
+useEffect(() => {
+  const products: Product[] =
+    JSON.parse(localStorage.getItem("products") || "[]");
 
-                const data = await productsResponse.json();
+  const categories: Category[] =
+    JSON.parse(localStorage.getItem("categories") || "[]");
 
-                const productsData = {
-                    ...data,
-                    products: data.products.filter((p: Product) =>
-                        p.title.toLowerCase().includes(query.toLowerCase())
-                    ),
-                };
+  if (!query) {
+    setProducts([]);
+    setCategoryResults([]);
+    setNotFound(true);
+    return;
+  }
 
-                if (productsData.products && productsData.products.length > 0) {
-                    setProducts(productsData.products);
-                    setCategoryResults([]);
-                } else {
-                    const categoriesResponse = await fetch(
-                        "https://dummyjson.com/products/categories"
-                    );
-                    const categoriesData = await categoriesResponse.json();
+  const q = query.toLowerCase();
+  setNotFound(false);
 
-                    const matchedCategories = categoriesData.filter(
-                        (cat: Category) =>
-                            cat.name.toLowerCase().includes(query.toLowerCase()) ||
-                            cat.slug.toLowerCase().includes(query.toLowerCase())
-                    );
+  const filteredProducts = products.filter(p =>
+    p.title.toLowerCase().includes(q)
+  );
 
-                    if (matchedCategories.length > 0) {
-                        setCategoryResults(matchedCategories);
-                        setProducts([]);
-                    } else {
-                        setNotFound(true);
-                    }
-                }
-            } catch (error) {
-                console.error("Search error:", error);
-                setNotFound(true);
-            } finally {
-                dispatch(updateLoading(false));
-            }
-        };
+  if (filteredProducts.length > 0) {
+    setProducts(filteredProducts);
+    setCategoryResults([]);
+    return;
+  }
 
-        searchProducts();
-    }, [query, dispatch]);
+  const matchedCategories = categories.filter(
+    c =>
+      c.name.toLowerCase().includes(q) ||
+      c.slug.toLowerCase().includes(q)
+  );
 
-    return (
-        <div className="container mx-auto min-h-[83vh] p-4 font-karla">
-            <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <span className="text-lg dark:text-white">
-                        Search results for: <span className="font-bold">"{query}"</span>
-                    </span>
-                    {products.length > 0 && (
-                        <SortProducts products={products} onChange={setProducts} />
-                    )}
-                </div>
+  if (matchedCategories.length > 0) {
+    setCategoryResults(matchedCategories);
+    setProducts([]);
+  } else {
+    setNotFound(true);
+  }
+}, [query]);
+  return (
+    <div className="container mx-auto min-h-[83vh] p-4">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-lg">
+            Search results for: <b>"{query}"</b>
+          </span>
 
-                {isLoading ? (
-                    <div className="flex items-center justify-center">
-                        <div className="animate-spin mt-32 rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
-                    </div>
-                ) : notFound ? (
-                    <div className="text-center mt-32">
-                        <p className="text-2xl dark:text-white">
-                            Sorry, no such product was found.
-                        </p>
-                    </div>
-                ) : categoryResults.length > 0 ? (
-                    <div>
-                        <p className="text-lg dark:text-white mb-4">
-                            No products found, but here are matching categories:
-                        </p>
-                        <div className="grid xl:grid-cols-6 lg:grid-cols-4 md:grid-cols-3 sm:grid-cols-2 gap-2">
-                            {categoryResults.map((category) => (
-                                <div
-                                    key={category.slug}
-                                    className="bg-gray-100 dark:bg-slate-600 dark:text-white px-4 py-4 font-karla cursor-pointer hover:bg-gray-200 dark:hover:bg-slate-500"
-                                    onClick={() => navigate(`/category/${category.slug}`)}
-                                >
-                                    <div className="text-lg">{category.name}</div>
-                                    <span className="text-blue-500 hover:underline">
-                                        View products
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                ) : (
-                    <PaginatedProducts
-                        products={products}
-                        isLoading={isLoading}
-                        initialRows={5}
-                    />
-                )}
-            </div>
+          {products.length > 0 && (
+            <SortProducts products={products} onChange={setProducts} />
+          )}
         </div>
-    );
+
+        {isLoading ? (
+          <div className="flex justify-center mt-32">
+            <div className="animate-spin h-12 w-12 border-t-2 border-b-2 border-gray-900 rounded-full" />
+          </div>
+        ) : notFound ? (
+          <div className="text-center mt-32 text-2xl">
+            Sonuç bulunamadı.
+          </div>
+        ) : categoryResults.length > 0 ? (
+          <div>
+            <p className="mb-4 text-lg">Eşleşen kategoriler:</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {categoryResults.map((cat) => (
+                <div
+                  key={cat.id}
+                  onClick={() => navigate(`/category/${cat.slug}`)}
+                  className="cursor-pointer bg-gray-100 p-4 hover:bg-gray-200 rounded"
+                >
+                  <div className="font-semibold">{cat.name}</div>
+                  <span className="text-blue-500 text-sm">Ürünleri gör</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <PaginatedProducts
+            products={products}
+            isLoading={isLoading}
+            initialRows={5}
+          />
+        )}
+      </div>
+    </div>
+  );
 };
 
 export default SearchPage;

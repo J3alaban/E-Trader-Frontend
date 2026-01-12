@@ -1,116 +1,122 @@
 import { FC, useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+
+// NOT: Bu import yolları yerel projenizdeki dosya yapısına göredir.
+// Canvas ortamında bu dosyalar bulunmadığı için derleme hatası verebilir,
+// ancak kendi projenize kopyaladığınızda sorunsuz çalışacaktır.
 import { useAppDispatch, useAppSelector } from "../redux/hooks";
-import { addToCart, setCartState } from "../redux/features/cartSlice";
 import { Product } from "../models/Product";
 import RatingStar from "../components/RatingStar";
 import PriceSection from "../components/PriceSection";
 import toast from "react-hot-toast";
 import { AiOutlineShoppingCart } from "react-icons/ai";
-import { FaHandHoldingDollar } from "react-icons/fa6";
+
 import ProductList from "../components/ProductList";
-import Reviews from "../components/Reviews";
+ // import Reviews from "../components/Reviews";
 import useAuth from "../hooks/useAuth";
 import { MdFavoriteBorder } from "react-icons/md";
 import { addToWishlist } from "../redux/features/productSlice";
 import { updateLoading } from "../redux/features/homeSlice";
+import { Config } from "../helpers/Config";
 
-const lorem =
-  "It is important to take care of the patient, to be followed by the patient, but it will happen at such a time that there is a lot of work and pain. For to come to the smallest detail, no one should practice any kind of work unless he derives some benefit from it. Do not be angry with the pain in the reprimand in the pleasure he wants to be a hair from the pain in the hope that there is no breeding. Unless they are blinded by lust, they do not come forth; they are in fault who abandon their duties and soften their hearts, that is, their labors.";
-
+/**
+ * SingleProduct Bileşeni
+ * Ürün detaylarını ve resim galerisini yönetir.
+ */
 const SingleProduct: FC = () => {
   const dispatch = useAppDispatch();
   const { productID } = useParams();
+  const navigate = useNavigate();
+  const { requireAuth } = useAuth();
+
+  const wishlist = useAppSelector((state) => state.productReducer.wishlist);
+
   const [product, setProduct] = useState<Product>();
-  const [imgs, setImgs] = useState<string[]>();
+  const [imgs, setImgs] = useState<string[]>([]);
   const [selectedImg, setSelectedImg] = useState<string>();
   const [sCategory, setScategory] = useState<string>();
   const [similar, setSimilar] = useState<Product[]>([]);
-  const { requireAuth } = useAuth();
+
   const isLoading = useAppSelector((state) => state.homeReducer.isLoading);
-  const navigate = useNavigate()
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   useEffect(() => {
-    const fetchProductDetails = () => {
-      dispatch(updateLoading(true));
-      fetch(`https://dummyjson.com/products/${productID}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const { thumbnail, images, category } = data;
-          setProduct(data);
-          setImgs(images);
-          setScategory(category);
-          setSelectedImg(thumbnail);
-          dispatch(updateLoading(false));
-        });
-    };
-    fetchProductDetails();
+    if (!productID) return;
+
+    dispatch(updateLoading(true));
+
+    fetch(`${Config.api.baseUrl}/api/v1/products/${productID}`)
+      .then((res) => res.json())
+      .then((data: Product) => {
+        setProduct(data);
+        const productImages = data.images || [];
+        setImgs(productImages);
+        setScategory(data.category);
+        setSelectedImg(productImages[0] || data.thumbnail);
+        localStorage.setItem("singleProductId", String(data.id));
+      })
+      .catch((err) => {
+        console.error("Veri çekme hatası:", err);
+        toast.error("Ürün bilgileri yüklenemedi.");
+      })
+      .finally(() => {
+        dispatch(updateLoading(false));
+      });
   }, [productID, dispatch]);
 
   useEffect(() => {
-    const fetchPreferences = (cat: string) => {
-      fetch(`https://dummyjson.com/products/category/${cat}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const _products: Product[] = data.products;
-          const filtered = _products.filter((product) => {
-            if (productID && product.id !== parseInt(productID)) return product;
-          });
-          setSimilar(filtered);
+    if (!sCategory) return;
+
+    fetch(`${Config.api.baseUrl}/api/v1/products?category=${encodeURIComponent(sCategory)}`)
+      .then((res) => res.json())
+      .then((data) => {
+        const filtered = data.content.filter((p: Product) => p.id !== Number(productID));
+        setSimilar(filtered);
+      });
+  }, [sCategory, productID]);
+
+    const addCart = () => {
+        requireAuth(async () => {
+            if (!product) return;
+
+            const userId = localStorage.getItem("userId");
+            if (!userId) return;
+
+            await fetch(`${Config.api.baseUrl}/api/v1/carts/${userId}/items`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productId: product.id,
+                    quantity: 1
+                }),
+            });
+
+            toast.success("Ürün sepete eklendi");
         });
     };
-    if (sCategory && sCategory !== "") fetchPreferences(sCategory);
-  }, [productID, sCategory]);
 
-  const addCart = () => {
-    requireAuth(() => {
-      if (product)
-        dispatch(
-          addToCart({
-            id: product.id,
-            price: product.price,
-            title: product.title,
-            category: product.category,
-            rating: product.rating,
-            thumbnail: product.thumbnail,
-            discountPercentage: product.discountPercentage,
-          })
-        );
-      toast.success("item added to cart successfully", {
-        duration: 3000,
-      });
-    });
-  };
+  const addWishlist = async () => {
+    requireAuth(async () => {
+      if (!product) return;
 
-  const buyNow = () => {
-    requireAuth(() => {
-      if (product)
-        dispatch(
-          addToCart({
-            id: product.id,
-            price: product.price,
-            title: product.title,
-            category: product.category,
-            rating: product.rating,
-            thumbnail: product.thumbnail,
-            discountPercentage: product.discountPercentage,
-          })
-        );
-      dispatch(setCartState(true));
-    });
-  };
+      const userId = localStorage.getItem("userId");
+      if (!userId) return;
 
-  const addWishlist = () => {
-    requireAuth(() => {
-      if (product) {
+      // Zaten wishlist'te var mı kontrol et
+      if (wishlist.some((p) => p.id === product.id)) {
+        toast("Ürün zaten favorilerinizde.");
+        return;
+      }
+
+      try {
+        await fetch(`${Config.api.baseUrl}/api/v1/wishlist/${userId}/${product.id}`, { method: "POST" });
         dispatch(addToWishlist(product));
-        toast.success("item added to your wishlist", {
-          duration: 3000,
-        });
+        toast.success("Ürün favorilere eklendi.");
+      } catch (error) {
+        toast.error("İşlem sırasında bir hata oluştu.");
       }
     });
   };
@@ -118,98 +124,125 @@ const SingleProduct: FC = () => {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[83vh]">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900 dark:border-white"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto pt-8 dark:text-white">
-      <button onClick={() => {navigate(-1)}} className="hover:text-gray-600"> ← Back </button>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 px-4 font-karla">
-        <div className="space-y-2">
-          <img src={selectedImg} alt="selected" className="h-80" />
-          <div className="flex space-x-1 items-center">
-            {imgs &&
-              imgs.map((_img) => (
-                <img
-                  src={_img}
-                  key={_img}
-                  alt="thumb"
-                  className={`w-12 cursor-pointer hover:border-2 hover:border-black ${_img === selectedImg ? "border-2 border-black" : ""
-                    }`}
-                  onClick={() => setSelectedImg(_img)}
-                />
-              ))}
-          </div>
-        </div>
-        <div className="px-2">
-          <h2 className="text-2xl">{product?.title}</h2>
-          {product?.rating && <RatingStar rating={product?.rating} />}
-          <div className="mt-1">
-            {product?.discountPercentage && (
-              <PriceSection
-                discountPercentage={product?.discountPercentage}
-                price={product?.price}
+    <div className="container mx-auto pt-8 dark:text-white px-4 md:px-0">
+      <button
+        onClick={() => navigate(-1)}
+        className="hover:text-pink-600 mb-6 transition-colors flex items-center gap-2 group"
+      >
+        <span className="group-hover:-translate-x-1 transition-transform">←</span> Geri Dön
+      </button>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 font-karla">
+        <div className="space-y-4">
+          {selectedImg && (
+            <div className="border rounded-2xl overflow-hidden bg-white shadow-sm flex justify-center items-center h-[450px] p-4">
+              <img
+                src={selectedImg}
+                alt={product?.title}
+                className="max-h-full max-w-full object-contain transition-all duration-500"
               />
-            )}
+            </div>
+          )}
+
+          <div className="flex gap-2 overflow-x-auto py-2 scrollbar-hide">
+            {imgs.map((img, idx) => (
+              <button
+                key={`${img}-${idx}`}
+                onClick={() => setSelectedImg(img)}
+                className={`flex-shrink-0 w-20 h-20 rounded-lg border-2 overflow-hidden transition-all duration-200 ${
+                  img === selectedImg
+                    ? "border-pink-500 ring-2 ring-pink-100 scale-105"
+                    : "border-gray-100 hover:border-gray-300"
+                }`}
+              >
+                <img
+                  src={img}
+                  alt={`Galeri ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
           </div>
-          <table className="mt-2">
-            <tbody>
-              <tr>
-                <td className="pr-2 font-bold">Brand</td>
-                <td>{product?.brand}</td>
-              </tr>
-              <tr>
-                <td className="pr-2 font-bold">Category</td>
-                <td>{product?.category}</td>
-              </tr>
-              <tr>
-                <td className="pr-2 font-bold">Stock</td>
-                <td>{product?.stock}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="mt-2">
-            <h2 className="font-bold">About the product</h2>
-            <p className="leading-5">
-              {product?.description} {lorem}
-            </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <div>
+            <span className="text-pink-600 font-bold text-sm uppercase tracking-widest">{product?.brand}</span>
+            <h1 className="text-3xl font-bold mt-1 text-gray-800 dark:text-gray-100 leading-tight">{product?.title}</h1>
+            {product?.rating && <div className="mt-2"><RatingStar rating={product.rating} /></div>}
           </div>
-          <div className="flex flex-wrap items-center mt-4 mb-2">
+
+          <div className="bg-gray-50 dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700">
+{product?.discountPercentage !== undefined && (
+  <PriceSection discountPercentage={product.discountPercentage} price={product.price} />
+)}
+          </div>
+
+          <div className="space-y-3 border-b border-gray-100 dark:border-gray-800 pb-5 text-sm">
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400 font-medium">Kategori</span>
+              <span className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">{product?.category}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 dark:text-gray-400 font-medium">Stok Bilgisi</span>
+              <span className={`font-semibold ${(product?.stock || 0) < 10 ? "text-orange-500" : "text-green-600"}`}>
+                {product?.stock} adet mevcut
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+  <span className="text-gray-500 dark:text-gray-400 font-medium">Beden</span>
+  <span className="bg-gray-100 dark:bg-gray-700 px-3 py-1 rounded-full">
+    {product?.size && product.size.trim() !== "" ? product.size : "-"}
+  </span>
+</div>
+          </div>
+
+
+
+
+
+
+
+          <div>
+            <h3 className="font-bold text-lg mb-2 text-gray-800 dark:text-gray-200">Ürün Detayı</h3>
+            <p className="text-gray-600 dark:text-gray-400 leading-relaxed italic">{product?.description}</p>
+          </div>
+
+          <div className="flex gap-4 mt-auto pt-6">
+
             <button
-              type="button"
-              className="flex space-x-1 items-center mr-2 mb-2 hover:bg-pink-700 text-white py-2 px-4 rounded bg-pink-500"
               onClick={addCart}
-              title="ADD TO CART"
+              className="flex-1 bg-pink-600 hover:bg-pink-700 text-white font-bold py-4 rounded-xl flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg shadow-pink-200 dark:shadow-none"
             >
-              <AiOutlineShoppingCart />
+              <AiOutlineShoppingCart size={24} />
+              Sepete Ekle
             </button>
+
+
             <button
-              type="button"
-              className="flex space-x-1 items-center mr-2 mb-2 bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-700"
-              onClick={buyNow}
-              title="BUY NOW"
-            >
-              <FaHandHoldingDollar />
-            </button>
-            <button
-              type="button"
-              className="flex space-x-1 items-center mb-2 bg-yellow-500 text-white py-2 px-4 rounded hover:bg-yellow-700"
               onClick={addWishlist}
-              title="ADD TO WISHLIST"
+              className="w-14 h-14 border-2 border-gray-200 dark:border-gray-700 hover:border-pink-500 hover:text-pink-500 rounded-xl flex items-center justify-center transition-all active:scale-95 text-gray-400"
+              title="Favorilere Ekle"
             >
-              <MdFavoriteBorder />
+              <MdFavoriteBorder size={28} />
             </button>
           </div>
         </div>
-        {product && <Reviews id={product?.id} />}
       </div>
-      <hr className="mt-4" />
-      <ProductList title="Similar Products" products={similar} />
-      <br />
+
+      <div className="mt-20">
+        <hr className="mb-12 border-gray-100 dark:border-gray-800" />
+        <ProductList title="Benzer Ürünler" products={similar} />
+      </div>
     </div>
   );
 };
 
 export default SingleProduct;
+

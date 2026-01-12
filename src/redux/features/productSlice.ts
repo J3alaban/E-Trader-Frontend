@@ -34,13 +34,18 @@ export const productSlice = createSlice({
     addProducts: (state, action: PayloadAction<Product[]>) => {
       return { ...state, allProducts: action.payload };
     },
+    setWishlist: (state, action: PayloadAction<Product[]>) => {
+  return { ...state, wishlist: action.payload };
+},
   },
+  
 });
 
 export const {
   updateNewList,
   updateFeaturedList,
   addToWishlist,
+  setWishlist,
   addCategories,
   addProducts,
 } = productSlice.actions;

@@ -7,23 +7,23 @@ import FeatureCard from "./FeatureCard";
 const data = [
   {
     icon: <TbTruckDelivery className="text-4xl dark:text-white" />,
-    title: "Free Delivery",
-    desc: "Orders from all items",
+    title: "Ücretsiz Teslimat", // Free Delivery 
+    desc: "Tüm ürünlerden gelen siparişler", //Orders from all items 
   },
   {
     icon: <RiRefund2Fill className="text-4xl dark:text-white" />,
-    title: "Return & Refund",
-    desc: "Money back guarantee",
+    title: "Para iadesi",  // Return & Refund 
+    desc: "Para iade garantisi", // Money back guarantee
   },
   {
     icon: <TbDiscount2 className="text-4xl dark:text-white" />,
-    title: "Member Discount",
-    desc: "On order over $99",
+    title: "Üye indirimleri ", // Member Discount 
+     desc: " ", //  On order over $99
   },
   {
     icon: <MdSupportAgent className="text-4xl dark:text-white" />,
-    title: "Support 24/7",
-    desc: "Contact us 24 hours a day",
+    title: "7/24 Destek",   //Support 24/7 
+    desc: "Bize günün 24 saati ulaşın",  //Contact us 24 hours a day 
   },
 ];
 

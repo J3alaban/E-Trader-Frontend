@@ -28,7 +28,7 @@ const SearchBar: FC<SearchBarProps> = ({ onSearch }) => {
         <div className="flex w-center max-w-[500px] border-1 border-blue-500 mx-5 rounded overflow-hidden">
             <input
                 type="text"
-                placeholder="apple.."
+                placeholder="Ara..."
                 className="border-2 border-blue-500 px-6 py-2 w-full dark:text-white dark:bg-slate-800"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}

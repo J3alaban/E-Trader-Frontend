@@ -1,18 +1,26 @@
 import { createSlice, PayloadAction } from "@reduxjs/toolkit";
-import { AuthSlice } from "../../models/AuthSlice";
+ // import { AuthSlice } from "../models/AuthSlice";
 
-interface LoginProps {
+interface AuthState {
+  isLoggedIn: boolean;
+  modalOpen: boolean;
   username: string;
-  password: string;
+  role: string | null; // Role bilgisini ekledik
 }
 
-const initialState: AuthSlice = {
-  isLoggedIn:
-    localStorage.getItem("username") !== null &&
-    localStorage.getItem("username") !== undefined &&
-    localStorage.getItem("username") !== "",
+interface LoginProps {
+  email: string;
+  role: string; // Login olduğunda gelen rol bilgisi
+}
+
+
+
+const initialState: AuthState = {
+  // Sadece username değil, token varsa giriş yapmış sayalım
+  isLoggedIn: !!localStorage.getItem("token"),
   modalOpen: false,
   username: localStorage.getItem("username") ?? "",
+  role: localStorage.getItem("role") ?? null,
 };
 
 export const authSlice = createSlice({
@@ -20,27 +28,22 @@ export const authSlice = createSlice({
   initialState,
   reducers: {
     updateModal: (state, action: PayloadAction<boolean>) => {
-      return { ...state, modalOpen: action.payload };
+      state.modalOpen = action.payload;
     },
     doLogin: (state, action: PayloadAction<LoginProps>) => {
-      if (
-        action.payload.username === "atuny0" &&
-        action.payload.password === "9uQFF1Lh"
-      ) {
-        localStorage.setItem("username", "atuny0");
-        return {
-          ...state,
-          username: "atuny0",
-          modalOpen: false,
-          isLoggedIn: true,
-        };
-      } else {
-        return state;
-      }
+      localStorage.setItem("username", action.payload.email);
+      localStorage.setItem("role", action.payload.role);
+      
+      state.username = action.payload.email;
+      state.role = action.payload.role;
+      state.isLoggedIn = true;
+      state.modalOpen = false;
     },
     doLogout: (state) => {
-      localStorage.removeItem("username");
-      return { ...state, username: "", isLoggedIn: false };
+      localStorage.clear(); // Hepsini temizlemek en güvenlisi
+      state.username = "";
+      state.role = null;
+      state.isLoggedIn = false;
     },
   },
 });

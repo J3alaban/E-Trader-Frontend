@@ -13,45 +13,57 @@ export const cartSlice = createSlice({
   reducers: {
     addToCart: (state, action: PayloadAction<CartItem>) => {
       const { cartItems } = state;
-      if (cartItems.findIndex((pro) => pro.id === action.payload.id) === -1) {
-        const item = { ...action.payload, quantity: 1 };
-        return { ...state, cartItems: [...cartItems, item] };
+      if (cartItems.findIndex(pro => pro.id === action.payload.id) === -1) {
+        return {
+          ...state,
+          cartItems: [...cartItems, { ...action.payload, quantity: 1 }],
+        };
       } else {
-        const updatedItems = cartItems.map((item) =>
-          item.id === action.payload.id
-            ? { ...item, quantity: item.quantity && item.quantity + 1 }
-            : item
-        );
-        return { ...state, cartItems: updatedItems };
+        return {
+          ...state,
+          cartItems: cartItems.map(item =>
+            item.id === action.payload.id
+              ? { ...item, quantity: (item.quantity ?? 0) + 1 }
+              : item
+          ),
+        };
       }
     },
+
+    /** 👇 BACKEND'DEN GELEN SEPET İÇİN */
+    setCartItems: (state, action: PayloadAction<CartItem[]>) => {
+      return { ...state, cartItems: action.payload };
+    },
+
     removeFromCart: (state, action: PayloadAction<number>) => {
-      const { cartItems } = state;
-      const updatedItems = cartItems.filter(
-        (item) => item.id !== action.payload
-      );
-      return { ...state, cartItems: updatedItems };
+      return {
+        ...state,
+        cartItems: state.cartItems.filter(item => item.id !== action.payload),
+      };
     },
+
     reduceFromCart: (state, action: PayloadAction<number>) => {
-      const { cartItems } = state;
-      const _item = cartItems.find((item) => item.id === action.payload);
-      if (_item?.quantity && _item?.quantity > 1) {
-        const updatedList = cartItems.map((item) =>
-          item.id === action.payload
-            ? { ...item, quantity: item.quantity && item.quantity - 1 }
-            : item
-        );
-        return { ...state, cartItems: updatedList };
-      } else {
-        const updatedItems = cartItems.filter(
-          (item) => item.id !== action.payload
-        );
-        return { ...state, cartItems: updatedItems };
+      const item = state.cartItems.find(i => i.id === action.payload);
+      if (item && item.quantity && item.quantity > 1) {
+        return {
+          ...state,
+          cartItems: state.cartItems.map(i =>
+            i.id === action.payload
+              ? { ...i, quantity: i.quantity! - 1 }
+              : i
+          ),
+        };
       }
+      return {
+        ...state,
+        cartItems: state.cartItems.filter(i => i.id !== action.payload),
+      };
     },
+
     setCartState: (state, action: PayloadAction<boolean>) => {
       return { ...state, cartOpen: action.payload };
     },
+
     emptyCart: (state) => {
       return { ...state, cartItems: [] };
     },
@@ -60,9 +72,12 @@ export const cartSlice = createSlice({
 
 export const {
   addToCart,
+  setCartItems,
   removeFromCart,
-  setCartState,
   reduceFromCart,
+  setCartState,
   emptyCart,
 } = cartSlice.actions;
+
 export default cartSlice.reducer;
+

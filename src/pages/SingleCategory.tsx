@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useState , /*useContext*/  } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAppDispatch } from "../redux/hooks";
 import { Product } from "../models/Product";
@@ -6,6 +6,8 @@ import { useAppSelector } from "../redux/hooks";
 import { updateLoading } from "../redux/features/homeSlice";
 import SortProducts from "../components/SortProducts"
 import PaginatedProducts from "../components/PaginatedProducts";
+ //import { AuthContext } from "../redux/AuthContext";
+import {Config} from "../helpers/Config";
 
 const SingleCategory: FC = () => {
   const dispatch = useAppDispatch();
@@ -13,21 +15,27 @@ const SingleCategory: FC = () => {
   const [productList, setProductList] = useState<Product[]>([]);
   const isLoading = useAppSelector((state) => state.homeReducer.isLoading);
   const navigate = useNavigate();
+   // const { token } = useContext(AuthContext)!;
+ // const API_URL = Config.api.baseUrl;
 
-  useEffect(() => {
-    const fetchProducts = () => {
-      dispatch(updateLoading(true));
-      fetch(`https://dummyjson.com/products/category/${slug}`)
-        .then((res) => res.json())
-        .then((data) => {
-          const { products } = data;
-          setProductList(products);
-          dispatch(updateLoading(false));
-        });
-    };
+useEffect(() => {
+  if (!slug) return;
 
-    fetchProducts();
-  }, [slug, dispatch]);
+  dispatch(updateLoading(true));
+
+  fetch(`${Config.api.baseUrl}/api/v1/categories/${slug}/products`, {
+    headers: {
+      method : "GET"
+    },
+  })
+    .then(res => res.json())
+    .then((data: Product[]) => {
+      setProductList(data);
+    })
+    .finally(() => {
+      dispatch(updateLoading(false));
+    });
+}, [dispatch, slug]);
 
   return (
     <div className="container mx-auto min-h-[83vh] p-4 font-karla">
