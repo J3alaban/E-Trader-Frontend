@@ -6,8 +6,8 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "80:80"  # Dışarıdan 80, içeriden Nginx'in dinlediği 80
-      - "8080:8080"
+      - "80:80"     # Ana site için
+      - "8080:8080" # React kodundaki API isteklerini yakalamak için
     container_name: react-ecommerce
     restart: unless-stopped
     networks:
@@ -15,4 +15,4 @@ services:
 
 networks:
   ecommerce-network:
-    driver: bridge
+    external: true # Backend ile aynı networkü kullanması için
