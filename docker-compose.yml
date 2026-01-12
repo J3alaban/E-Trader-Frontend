@@ -6,33 +6,12 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "3000:80"
+      - "80:80"  # Dışarıdan 80, içeriden Nginx'in dinlediği 80
     container_name: react-ecommerce
     restart: unless-stopped
     networks:
       - ecommerce-network
 
-  # Optional: Add a development service for hot reloading
-  ecommerce-dev:
-    build:
-      context: .
-      dockerfile: Dockerfile.dev
-    ports:
-      - "5173:5173"
-    container_name: react-ecommerce-dev
-    volumes:
-      - .:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
-    networks:
-      - ecommerce-network
-    profiles:
-      - dev
-
 networks:
   ecommerce-network:
     driver: bridge
-# Optional: Add volume for persistent data if needed
-# volumes:
-#   ecommerce-data:
