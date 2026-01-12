@@ -1,38 +1,26 @@
 version: "3.8"
 
 services:
-  ecommerce-app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+  backend:
+    image: e-trader-backend-backend
+    container_name: backend
     ports:
-      - "3000:80"
-    container_name: react-ecommerce
-    restart: unless-stopped
+      - "8080:8080"
     networks:
       - ecommerce-network
 
-  # Optional: Add a development service for hot reloading
-  ecommerce-dev:
+  frontend:
     build:
-      context: .
-      dockerfile: Dockerfile.dev
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: react-ecommerce
     ports:
-      - "5173:5173"
-    container_name: react-ecommerce-dev
-    volumes:
-      - .:/app
-      - /app/node_modules
-    environment:
-      - NODE_ENV=development
+      - "80:80"
     networks:
       - ecommerce-network
-    profiles:
-      - dev
+    depends_on:
+      - backend
 
 networks:
   ecommerce-network:
     driver: bridge
-# Optional: Add volume for persistent data if needed
-# volumes:
-#   ecommerce-data:
