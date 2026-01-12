@@ -2,10 +2,8 @@ services:
   ecommerce-app:
     build:
       context: .
-      dockerfile: Dockerfile
     ports:
-      - "80:80"
-      - "8080:8080"
+      - "80:80" # Sadece bu kalsın! 8080'i sildik.
     container_name: react-ecommerce
     restart: unless-stopped
     networks:
