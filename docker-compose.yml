@@ -9,9 +9,9 @@ services:
     container_name: react-ecommerce
     restart: unless-stopped
     networks:
-      - backend_net
+      backend_network: {}
 
 networks:
-  backend_net:
+  backend_network:
     external: true
-    name: e-trader-backend_ecommerce-network # Listede gördüğümüz tam isim
+    name: e-trader-backend_ecommerce-network
