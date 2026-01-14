@@ -1,13 +1,15 @@
+version: "3.8"
+
 services:
   ecommerce-app:
     build:
       context: .
     ports:
-      - "81:80"
+      - "81:80"  # Host 81 -> Container 80
     container_name: react-ecommerce
     restart: unless-stopped
     environment:
-      VITE_API_URL: /api
+      VITE_API_URL: /api   # Frontend build sırasında backend URL'i olarak kullanılacak
     networks:
       backend_network: {}
 
