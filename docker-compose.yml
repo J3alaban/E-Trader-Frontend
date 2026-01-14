@@ -3,9 +3,11 @@ services:
     build:
       context: .
     ports:
-      - "80:80" # Sadece bu kalsın! 8080'i sildik.
+      - "80:80"
     container_name: react-ecommerce
     restart: unless-stopped
+    environment:
+      VITE_API_URL: /api
     networks:
       backend_network: {}
 
