@@ -24,21 +24,25 @@ FROM nginx:alpine
 # Copy built files from build stage
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration (optional - creates a custom config)
+# Copy custom nginx configuration
 RUN echo 'server { \
     listen 80; \
-    server_name localhost; \
+    server_name demirayhidrolik.com www.demirayhidrolik.com; \
+    \
+    root /usr/share/nginx/html; \
+    index index.html index.htm; \
     \
     location / { \
-        root /usr/share/nginx/html; \
-        index index.html index.htm; \
         try_files $uri $uri/ /index.html; \
     } \
     \
-    # Handle API requests (if needed) \
-    # location /api { \
-    #     proxy_pass http://backend:3001; \
-    # } \
+    location /api/ { \
+        proxy_pass http://e-trader-backend-backend-1:8080; \
+        proxy_http_version 1.1; \
+        proxy_set_header Host $host; \
+        proxy_set_header X-Real-IP $remote_addr; \
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for; \
+    } \
     \
     # Gzip compression \
     gzip on; \
