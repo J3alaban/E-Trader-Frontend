@@ -3,7 +3,7 @@ services:
     build:
       context: .
     ports:
-      - "80:80"
+      - "81:80"
     container_name: react-ecommerce
     restart: unless-stopped
     environment:
