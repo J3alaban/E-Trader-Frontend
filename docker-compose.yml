@@ -16,4 +16,4 @@ services:
 networks:
   backend_network:
     external: true
-    name: e-trader-backend_ecommerce-network
+    name: e-trader-backend2_ecommerce-network
