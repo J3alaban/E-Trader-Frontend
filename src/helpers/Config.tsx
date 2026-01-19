@@ -1,6 +1,6 @@
 export const Config ={
     api: {
-        baseUrl:""   //this url for the connecting backend api. is can chanced for remote api server.
-     
+        // Domain üzerinden gitmek Port 81 ve 8082 arasındaki CORS çakışmasını önler
+        baseUrl: "https://api.demirayhidrolik.com:8443"
     },
-} 
+}
