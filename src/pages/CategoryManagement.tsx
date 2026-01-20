@@ -12,7 +12,9 @@ type CategoryBody = {
 
 const CategoryManagement: FC = () => {
   // --- YETKİ KONTROLÜ ---
-     const { role, isLoggedIn } = useAppSelector((state) => state.authReducer);
+
+
+  const { role, isLoggedIn } = useAppSelector((state) => state.authReducer);
   
   const [categories, setCategories] = useState<CategoryBody[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);

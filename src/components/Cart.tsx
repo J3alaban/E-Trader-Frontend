@@ -1,8 +1,10 @@
-import  { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import {Config} from "../helpers/Config.tsx";
+import { motion, AnimatePresence } from "framer-motion";
+import { Trash2, Plus, Minus, ShoppingBag, ArrowRight } from "lucide-react";
+import { Config } from "../helpers/Config.tsx";
 
-// Tip tanımlamaları (Eksikse ekleyebilirsiniz)
+// Tip tanımlamaları
 interface CartItem {
   id: number;
   productId: number;
@@ -27,7 +29,6 @@ const Cart = () => {
   const navigate = useNavigate();
   const storedUserId = localStorage.getItem("userId");
 
-  // Sayı formatlama fonksiyonu (6.0E7 gibi değerleri düzgün gösterir)
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("tr-TR", {
       style: "currency",
@@ -44,27 +45,21 @@ const Cart = () => {
         .catch((err) => console.error("Sepet getirme hatası:", err));
   }, [storedUserId]);
 
-  const handleQuantityChange = async (productId: number, newQuantity: number) => {
-    if (!storedUserId || newQuantity < 1) return;
+  // Sadece Frontend üzerinde miktarı ve toplam fiyatı günceller
+  const handleQuantityChange = (productId: number, newQuantity: number) => {
+    if (!cart || newQuantity < 1) return;
 
-    try {
-      const response = await fetch(
-          `${Config.api.baseUrl}/api/v1/carts/${storedUserId}/items/${productId}`,
-          {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ quantity: newQuantity }),
-          }
-      );
+    const updatedItems = cart.items.map((item) =>
+        item.productId === productId ? { ...item, quantity: newQuantity } : item
+    );
 
-      if (response.ok) {
-        const updatedCart = await response.json();
-        // Backend'den gelen tüm sepet objesini set ediyoruz
-        setCart(updatedCart);
-      }
-    } catch (error) {
-      console.error("Adet güncelleme hatası:", error);
-    }
+    const newTotal = updatedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
+
+    setCart({
+      ...cart,
+      items: updatedItems,
+      totalPrice: newTotal
+    });
   };
 
   const handleDelete = (productId: number) => {
@@ -72,8 +67,6 @@ const Cart = () => {
     fetch(`${Config.api.baseUrl}/api/v1/carts/${storedUserId}/items/${productId}`, {
       method: "DELETE",
     }).then(() => {
-      // Silerken sadece frontend'den filtrelemek yerine backend'den tekrar çekmek
-      // totalPrice senkronizasyonu için daha garantidir.
       if (cart) {
         const updatedItems = cart.items.filter((item) => item.productId !== productId);
         const newTotal = updatedItems.reduce((acc, curr) => acc + curr.price * curr.quantity, 0);
@@ -83,15 +76,14 @@ const Cart = () => {
   };
 
   const handleCreateOrder = async () => {
-    if (!storedUserId || !cart || cart.items.length === 0) {
-      alert("Sepetiniz boş!");
-      return;
-    }
-
+    if (!storedUserId || !cart || cart.items.length === 0) return;
     setLoading(true);
+
+    // Backend'e güncel miktar ve fiyat bilgileriyle istek atılır
     const orderRequest = {
       userId: Number(storedUserId),
       productId: cart.items.map((item) => item.productId),
+      quantities: cart.items.map((item) => item.quantity), // Backend beklentisine göre eklendi
       totalPrice: cart.totalPrice,
       addressId: 1,
       orderDate: new Date().toISOString(),
@@ -103,117 +95,184 @@ const Cart = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(orderRequest),
       });
-
       if (response.ok) {
         const orderData = await response.json();
         navigate(`/payment/${orderData.id}`);
-      } else {
-        const errorData = await response.json();
-        alert(`Hata: ${errorData.message || "Sipariş oluşturulamadı."}`);
       }
     } catch (error) {
-      alert("Bağlantı hatası oluştu.");
+      console.error("Sipariş hatası:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (!cart) return <div className="p-4 text-center text-lg">Yükleniyor...</div>;
+  if (!cart || cart.items.length === 0) {
+    return (
+        <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <ShoppingBag className="h-24 w-24 text-blue-100 mb-6 mx-auto" />
+            <h2 className="text-2xl font-bold text-gray-800 text-center">Sepetiniz Boş</h2>
+            <p className="text-gray-500 mb-8 text-center">Henüz ürün eklememişsiniz.</p>
+            <button
+                onClick={() => navigate("/products")}
+                className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 mx-auto"
+            >
+              Alışverişe Başla <ArrowRight size={20} />
+            </button>
+          </motion.div>
+        </div>
+    );
+  }
 
   const start = (page - 1) * ITEMS_PER_PAGE;
   const paginatedItems = cart.items.slice(start, start + ITEMS_PER_PAGE);
   const totalPages = Math.ceil(cart.items.length / ITEMS_PER_PAGE) || 1;
 
   return (
-      <div className="max-w-3xl mx-auto p-6 bg-white shadow-lg rounded-lg">
-        <h1 className="text-3xl font-extrabold mb-6 text-gray-800 border-b pb-3">🛒 Sepetim</h1>
+      <div className="max-w-5xl mx-auto p-4 md:p-8 font-karla">
+        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="mb-8">
+          <h1 className="text-4xl font-black text-gray-900 flex items-center gap-3">
+            <span className="text-blue-600">🛒</span> SEPETİM
+          </h1>
+          <p className="text-gray-500 mt-2 font-medium">Toplam {cart.items.length} ürün bulundu.</p>
+        </motion.div>
 
-        <div className="space-y-4">
-          {paginatedItems.length > 0 ? (
-              paginatedItems.map((item) => (
-                  <div key={item.id} className="flex justify-between items-center border p-4 rounded-lg shadow-sm bg-gray-50">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Ürün Listesi */}
+          <div className="lg:col-span-2 space-y-4">
+            <AnimatePresence>
+              {paginatedItems.map((item, index) => (
+                  <motion.div
+                      key={item.productId}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ delay: index * 0.05 }}
+                      className="group bg-white border border-gray-100 p-5 rounded-2xl shadow-sm hover:shadow-md transition-all flex flex-col sm:flex-row items-center gap-6"
+                  >
                     <div className="flex-1">
-                      <p className="font-semibold text-lg text-gray-700">{item.productTitle}</p>
-                      <p className="text-sm text-gray-500 font-mono">
-                        Birim Fiyat: {formatCurrency(item.price)}
+                      <h3 className="font-bold text-lg text-gray-800 group-hover:text-blue-600 transition-colors uppercase tracking-tight">
+                        {item.productTitle}
+                      </h3>
+                      <p className="text-sm text-blue-500 font-bold mt-1">
+                        {formatCurrency(item.price)} <span className="text-gray-400 font-normal">/ adet</span>
                       </p>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                      <div className="flex flex-col items-center">
-                        <label className="text-xs text-gray-400 mb-1">Adet</label>
+                    <div className="flex items-center gap-8">
+                      {/* Miktar Kontrolü */}
+                      <div className="flex items-center bg-gray-50 rounded-xl border border-gray-100 p-1">
+                        <button
+                            onClick={() => handleQuantityChange(item.productId, item.quantity - 1)}
+                            className="p-2 hover:bg-white hover:text-blue-600 rounded-lg transition-all"
+                        >
+                          <Minus size={16} />
+                        </button>
+
                         <input
                             type="number"
-                            min={1}
-                            max={100}
                             value={item.quantity}
-                            onChange={(e) => handleQuantityChange(item.productId, Number(e.target.value))}
-                            className="w-16 px-2 py-1 border rounded-md text-center focus:ring-2 focus:ring-blue-500 outline-none"
+                            min="1"
+                            onChange={(e) => handleQuantityChange(item.productId, parseInt(e.target.value) || 1)}
+                            className="w-12 text-center font-bold text-gray-700 bg-transparent border-none focus:ring-0 appearance-none"
                         />
+
+                        <button
+                            onClick={() => handleQuantityChange(item.productId, item.quantity + 1)}
+                            className="p-2 hover:bg-white hover:text-blue-600 rounded-lg transition-all"
+                        >
+                          <Plus size={16} />
+                        </button>
                       </div>
 
-                      <div className="text-right min-w-[100px]">
-                        <p className="text-xs text-gray-400">Ara Toplam</p>
-                        <p className="font-bold text-gray-800">
+                      {/* Ara Toplam */}
+                      <div className="text-right min-w-[120px]">
+                        <p className="text-[10px] uppercase font-bold text-gray-400">Ara Toplam</p>
+                        <p className="font-black text-gray-900 text-lg">
                           {formatCurrency(item.price * item.quantity)}
                         </p>
                       </div>
 
+                      {/* Silme */}
                       <button
                           onClick={() => handleDelete(item.productId)}
-                          className="text-red-500 hover:text-red-700 transition-colors p-2"
-                          title="Sil"
+                          className="p-3 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
                       >
-                        🗑️
+                        <Trash2 size={20} />
                       </button>
                     </div>
-                  </div>
-              ))
-          ) : (
-              <p className="text-center py-10 text-gray-500">Sepetinizde ürün bulunmamaktadır.</p>
-          )}
-        </div>
+                  </motion.div>
+              ))}
+            </AnimatePresence>
 
-        {/* Sayfalama */}
-        {totalPages > 1 && (
-            <div className="flex justify-center items-center mt-6 gap-4">
-              <button
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-30 transition-all"
-              >
-                ⬅️ Geri
-              </button>
-              <span className="font-medium text-gray-600">
-            {page} / {totalPages}
-          </span>
-              <button
-                  disabled={page === totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded disabled:opacity-30 transition-all"
-              >
-                İleri ➡️
-              </button>
-            </div>
-        )}
-
-        {/* Alt Kısım */}
-        <div className="mt-8 pt-6 border-t flex flex-col items-end gap-4">
-          <div className="flex flex-col items-end">
-            <span className="text-gray-500 text-sm">Genel Toplam</span>
-            <div className="text-3xl font-black text-green-600">
-              {formatCurrency(cart.totalPrice)}
-            </div>
+            {/* Pagination */}
+            {totalPages > 1 && (
+                <div className="flex justify-center items-center py-6 gap-2">
+                  <button
+                      disabled={page === 1}
+                      onClick={() => setPage((p) => p - 1)}
+                      className="p-2 border rounded-lg disabled:opacity-20 hover:bg-gray-50"
+                  >
+                    <ArrowRight className="rotate-180" size={20} />
+                  </button>
+                  <span className="text-sm font-bold px-4">Sayfa {page} / {totalPages}</span>
+                  <button
+                      disabled={page === totalPages}
+                      onClick={() => setPage((p) => p + 1)}
+                      className="p-2 border rounded-lg disabled:opacity-20 hover:bg-gray-50"
+                  >
+                    <ArrowRight size={20} />
+                  </button>
+                </div>
+            )}
           </div>
 
-          <button
-              onClick={handleCreateOrder}
-              disabled={loading || cart.items.length === 0}
-              className={`w-full sm:w-64 py-4 rounded-xl font-bold text-white shadow-md transition-all uppercase tracking-wider
-            ${loading ? "bg-gray-400 cursor-wait" : "bg-blue-600 hover:bg-blue-700 active:scale-95 shadow-blue-200"}`}
-          >
-            {loading ? "Sipariş İşleniyor..." : "💳 Ödemeye Geç"}
-          </button>
+          {/* Sipariş Özeti Kartı */}
+          <div className="lg:col-span-1">
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-slate-900 text-white p-8 rounded-[2rem] shadow-xl sticky top-24"
+            >
+              <h2 className="text-xl font-bold mb-6 border-b border-slate-800 pb-4">Sipariş Özeti</h2>
+
+              <div className="space-y-4 mb-8 text-slate-400">
+                <div className="flex justify-between">
+                  <span>Ara Toplam</span>
+                  <span className="text-white">{formatCurrency(cart.totalPrice)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>KDV (%20)</span>
+                  <span className="text-white">Dahil</span>
+                </div>
+                <div className="flex justify-between items-center text-green-400 text-sm">
+                  <span>Kargo</span>
+                  <span className="border border-green-400/30 px-2 py-0.5 rounded-md uppercase text-[10px] font-bold">Bedava</span>
+                </div>
+              </div>
+
+              <div className="border-t border-slate-800 pt-6 mb-8">
+                <p className="text-sm text-slate-500 uppercase font-bold mb-1">Ödenecek Tutar</p>
+                <p className="text-4xl font-black text-blue-400">
+                  {formatCurrency(cart.totalPrice)}
+                </p>
+              </div>
+
+              <button
+                  onClick={handleCreateOrder}
+                  disabled={loading}
+                  className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all active:scale-95 shadow-lg
+                ${loading ? "bg-slate-700 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-500 shadow-blue-900/20"}`}
+              >
+                {loading ? "İşleniyor..." : "ÖDEMEYE GEÇ"}
+                {!loading && <ArrowRight size={20} />}
+              </button>
+
+              <p className="text-[10px] text-center text-slate-500 mt-6 uppercase tracking-widest">
+                256-bit SSL Güvenli Ödeme
+              </p>
+            </motion.div>
+          </div>
         </div>
       </div>
   );

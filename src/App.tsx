@@ -26,7 +26,8 @@ import AdminPage from "./pages/AdminPage";
 import HomePage from "./pages/HomePage"; 
 import  ForgotPassword  from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
-
+import VerifyEmail from "./pages/VerifyEmail";
+import Iyzico from "./pages/Iyzico";
 function App() {
   return (
     <Provider store={store}>
@@ -51,6 +52,8 @@ function App() {
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/Iyzico" element={<Iyzico/>} />
 
 
            <Route element={<ProtectedRoute />}>
