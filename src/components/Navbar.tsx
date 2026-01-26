@@ -13,7 +13,7 @@ const Navbar: FC = () => {
     const dispatch = useAppDispatch();
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [dynamicCartCount, setDynamicCartCount] = useState(0);
-    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false); // Çıkış modalı için state
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const { username, role } = useAppSelector((state) => state.authReducer);
     const isDarkMode = useAppSelector((state) => state.homeReducer.isDarkMode);
@@ -26,7 +26,7 @@ const Navbar: FC = () => {
         setToken(null);
         dispatch(doLogout());
         setIsMenuOpen(false);
-        setShowLogoutConfirm(false); // Modalı kapat
+        setShowLogoutConfirm(false);
     };
 
     useEffect(() => {
@@ -61,11 +61,34 @@ const Navbar: FC = () => {
                         Demiray Hidrolik
                     </Link>
 
+                    {/* Desktop Arama */}
                     <div className="hidden lg:block flex-1 max-w-md mx-4">
                         <SearchBar onSearch={() => setIsMenuOpen(false)} />
                     </div>
 
                     <div className="flex items-center gap-3 md:gap-5 dark:text-white">
+
+                        {/* Desktop Menü Linkleri */}
+                        <div className="hidden lg:flex items-center gap-4 border-r pr-4 border-gray-200 dark:border-slate-600">
+                            <Link
+                                to="/products"
+                                className="hover:text-blue-500 font-semibold"
+                            >
+                                Ürünler
+                            </Link>
+                            <Link
+                                to="/categories"
+                                className="hover:text-blue-500 font-semibold"
+                            >
+                                Kategoriler
+                            </Link>
+                            {role === "ADMIN" && (
+                                <Link to="/admin" className="text-red-500 font-semibold">
+                                    Admin Paneli
+                                </Link>
+                            )}
+                        </div>
+
                         {username !== "" ? (
                             <div className="flex items-center gap-3 md:gap-4 border-r pr-3 md:pr-5 border-gray-200 dark:border-slate-600">
                                 <Link to="/wishlist" className="hover:text-blue-500 flex flex-col items-center">
@@ -76,8 +99,10 @@ const Navbar: FC = () => {
                                     <MdOutlineAccountCircle size={22} className="text-blue-500" />
                                     <span className="text-[10px] hidden md:block">{username.split(' ')[0]}</span>
                                 </Link>
-                                {/* Çıkış Butonu artık Modalı tetikliyor */}
-                                <button onClick={() => setShowLogoutConfirm(true)} className="hover:text-red-500 flex flex-col items-center">
+                                <button
+                                    onClick={() => setShowLogoutConfirm(true)}
+                                    className="hover:text-red-500 flex flex-col items-center"
+                                >
                                     <MdOutlineLogout size={22} className="text-gray-500 dark:text-gray-400" />
                                     <span className="text-[10px] hidden md:block">Çıkış</span>
                                 </button>
@@ -108,10 +133,12 @@ const Navbar: FC = () => {
                     </div>
                 </div>
 
+                {/* Mobil Arama */}
                 <div className="lg:hidden mt-4">
                     <SearchBar onSearch={() => setIsMenuOpen(false)} />
                 </div>
 
+                {/* Mobil Menü */}
                 {isMenuOpen && (
                     <div className="sm:hidden fixed inset-0 top-0 bg-white dark:bg-slate-900 z-40 pt-24">
                         <div className="flex flex-col items-center gap-8 text-2xl font-bold dark:text-white">
@@ -130,7 +157,7 @@ const Navbar: FC = () => {
                 )}
             </div>
 
-            {/* ÇIKIŞ ONAY MODALI (Tailwind CSS) */}
+            {/* ÇIKIŞ ONAY MODALI */}
             {showLogoutConfirm && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm px-4">
                     <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl max-w-sm w-full transform transition-all border border-gray-100 dark:border-slate-700">
