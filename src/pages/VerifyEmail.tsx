@@ -1,11 +1,11 @@
 import { useEffect, useState, useRef } from "react";
-import { useSearchParams, useNavigate, Link } from "react-router-dom";
+import { useSearchParams, Link } from "react-router-dom";
 import { Config } from "../helpers/Config";
 import { FaCheckCircle, FaSpinner, FaTimesCircle } from "react-icons/fa";
 
 const VerifyEmail = () => {
     const [searchParams] = useSearchParams();
-    const navigate = useNavigate();
+
     const token = searchParams.get("token");
 
     const [status, setStatus] = useState<"loading" | "success" | "error">("loading");

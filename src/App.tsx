@@ -23,11 +23,14 @@ import Register from "./pages/Register";
 import PaymentPage from "./pages/PaymentPage";
 import Cart from "./components/Cart";
 import AdminPage from "./pages/AdminPage";
-import HomePage from "./pages/HomePage"; 
+import HomePage from "./pages/HomePage";
+import OrderPage from "./pages/OrderPage" ;
 import  ForgotPassword  from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import VerifyEmail from "./pages/VerifyEmail";
 import Iyzico from "./pages/Iyzico";
+import PaymentSuccess from "./pages/PaymentSuccess";
+
 function App() {
   return (
     <Provider store={store}>
@@ -49,11 +52,13 @@ function App() {
           <Route path="/register" element={<Register/>} /> // Api den çekildi
           <Route path="/payment/:orderId" element={<PaymentPage />} />
           <Route path="/cart" element={<Cart />} />
+          <Route path="/order" element={<OrderPage />} />
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/forgotpassword" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/Iyzico" element={<Iyzico/>} />
+          <Route path="/Iyzico" element={<Iyzico />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
 
 
            <Route element={<ProtectedRoute />}>

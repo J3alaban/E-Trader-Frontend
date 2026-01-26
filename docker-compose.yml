@@ -1,19 +1,11 @@
 version: "3.8"
 
 services:
-  ecommerce-app:
-    build:
-      context: .
+  frontend:
+    build: .
+    container_name: demirayhidrolik-frontend
     ports:
-      - "81:80"  # Host 81 -> Container 80
-    container_name: react-ecommerce
+      - "3003:80"   # nginx -> container
     restart: unless-stopped
     environment:
-      VITE_API_URL: /api   # Frontend build sırasında backend URL'i olarak kullanılacak
-    networks:
-      backend_network: {}
-
-networks:
-  backend_network:
-    external: true
-    name: e-trader-backend2_ecommerce-network
+      VITE_API_URL: https://api.demirayhidrolik.com

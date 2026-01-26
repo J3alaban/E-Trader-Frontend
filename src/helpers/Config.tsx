@@ -1,6 +1,6 @@
 export const Config ={
     api: {
         // Domain üzerinden gitmek Port 81 ve 8082 arasındaki CORS çakışmasını önler
-        baseUrl: "http://localhost:8080"
+        baseUrl: "http://192.168.1.165:8080"
     },
 }

@@ -92,6 +92,8 @@ export default function ProfileAddress() {
 }
   };
 
+
+
   const confirmDelete = (id: number) => {
     setDeleteId(id);
     setShowDeleteModal(true);
@@ -128,6 +130,7 @@ export default function ProfileAddress() {
       if (!newAddress.street || !newAddress.city) return;
       if (!res.ok) throw new Error("Yeni adres eklenemedi.");
       const created = await res.json();
+      localStorage.setItem("lastCreatedAddressId", created.id.toString());  // Uzak Sunucuya yüklemen gereken yer
       setAddresses(prev => [...prev, created]);
       setSuccessMessage("Yeni adres başarıyla eklendi.");
       setShowNewForm(false);

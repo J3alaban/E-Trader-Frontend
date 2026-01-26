@@ -1,176 +1,171 @@
-import { FC, useEffect, useState, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-    ShieldCheck,
-    Lock,
-    ChevronLeft,
-    Loader2,
-    AlertCircle,
-    CreditCard
-} from "lucide-react";
-import { Config } from "../helpers/Config";
+import { motion } from "framer-motion";
+import { CreditCard, Loader2, AlertCircle, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Config } from "../helpers/Config.tsx";
+import { IyzicoNavigationState } from "./OrderPage"; // Tipleri oradan çekiyoruz
 
-const IyzicoPage: FC = () => {
+// --- Tip Tanımlamaları ---
+
+interface PaymentRequest {
+    orderId: number;
+    method: string;
+    amount: number;
+    currency: string;
+    provider: string;
+    addressId: number; // Bu değerin OrderPage'den gelmesi idealdir
+}
+
+interface PaymentResponse {
+    paymentPageUrl?: string; // Bazı senaryolarda URL döner
+    checkoutFormContent?: string; // HTML script içeriği
+    status: string;
+}
+
+const Iyzico = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { orderId, totalPrice } = location.state || {};
+    const state = location.state as IyzicoNavigationState | null;
 
-    const [loading, setLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
-    const scriptInjected = useRef(false);
 
+    // Sayfa yüklendiğinde state kontrolü
     useEffect(() => {
-        // Eğer state üzerinden veri gelmemişse (doğrudan linkle girilmişse) geri gönder
-        if (!orderId) {
-            navigate("/payment");
-            return;
+        if (!state) {
+            navigate("/cart");
         }
+    }, [state, navigate]);
 
-        const fetchIyzicoForm = async () => {
-            try {
-                setLoading(true);
-                const response = await fetch(`${Config.api.baseUrl}/api/v1/payments/iyzico-start`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ orderId: Number(orderId) }),
-                });
+    const handleStartPayment = async () => {
+        if (!state) return;
 
-                if (!response.ok) throw new Error("Ödeme formu alınamadı.");
+        setIsProcessing(true);
+        setError(null);
 
-                const data = await response.json();
-
-                if (data && data.checkoutFormContent) {
-                    injectIyzicoScript(data.checkoutFormContent);
-                } else {
-                    throw new Error("Geçersiz API yanıtı.");
-                }
-            } catch (err: any) {
-                setError(err.message || "Bir hata oluştu.");
-            } finally {
-                setLoading(false);
-            }
+        // Belirttiğin request body formatı
+        const paymentRequest: PaymentRequest = {
+            orderId: state.orderId,
+            method: "CREDIT_CARD",
+            amount: state.amount,
+            currency: "TRY",
+            provider: "IYZICO",
+            addressId: 24, // Sabit verdik, dinamik olması için OrderPage'den taşınmalı
         };
 
-        if (!scriptInjected.current) {
-            fetchIyzicoForm();
+        try {
+            const response = await fetch(`${Config.api.baseUrl}/api/payments/iyzico-start`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify(paymentRequest),
+            });
+
+            if (!response.ok) throw new Error("Ödeme başlatılamadı.");
+
+            const result: PaymentResponse = await response.json();
+
+            if (result.checkoutFormContent) {
+                // Iyzico'nun gönderdiği script içeriğini sayfaya enjekte ediyoruz
+                const checkoutDiv = document.getElementById("iyzipay-checkout-form");
+                if (checkoutDiv) {
+                    // Önceki içeriği temizle
+                    checkoutDiv.innerHTML = result.checkoutFormContent;
+
+                    // Script tag'lerini manuel olarak çalıştırmamız gerekebilir
+                    const scripts = checkoutDiv.getElementsByTagName("script");
+                    for (let i = 0; i < scripts.length; i++) {
+                        const script = document.createElement("script");
+                        script.type = "text/javascript";
+                        if (scripts[i].src) {
+                            script.src = scripts[i].src;
+                        } else {
+                            script.textContent = scripts[i].textContent;
+                        }
+                        document.head.appendChild(script);
+                    }
+                }
+            } else if (result.paymentPageUrl) {
+                // Eğer script değil de URL dönerse oraya yönlendir
+                window.location.href = result.paymentPageUrl;
+            }
+
+        } catch (err) {
+            setError("Ödeme sistemiyle bağlantı kurulamadı. Lütfen tekrar deneyin.");
+            console.error(err);
+        } finally {
+            setIsProcessing(false);
         }
-    }, [orderId, navigate]);
-
-    const injectIyzicoScript = (content: string) => {
-        // Iyzico scriptini çalıştırmak için script elementini manuel oluşturup enjekte ediyoruz
-        const container = document.getElementById("iyzipay-checkout-form");
-        if (!container) return;
-
-        const range = document.createRange();
-        const fragment = range.createContextualFragment(content);
-        container.appendChild(fragment);
-        scriptInjected.current = true;
     };
 
+    if (!state) return null;
+
     return (
-        <div className="min-h-screen bg-[#f8fafc] flex flex-col items-center justify-center p-4 font-karla">
-            {/* Üst Bar / Geri Dönüş */}
-            <motion.div
-                initial={{ y: -20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="w-full max-w-2xl flex justify-between items-center mb-8"
+        <div className="max-w-2xl mx-auto p-6 md:p-12 font-karla">
+            <button
+                onClick={() => navigate(-1)}
+                className="flex items-center gap-2 text-gray-500 hover:text-blue-600 mb-8 font-bold transition-colors"
             >
-                <button
-                    onClick={() => navigate(-1)}
-                    className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-bold text-sm group"
-                >
-                    <div className="p-2 bg-white rounded-full shadow-sm group-hover:shadow-md transition-all">
-                        <ChevronLeft size={18} />
+                <ArrowLeft size={20} /> Vazgeç ve Geri Dön
+            </button>
+
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-xl text-center"
+            >
+                <div className="flex justify-center mb-6">
+                    <div className="bg-blue-50 p-4 rounded-full">
+                        <CreditCard size={40} className="text-blue-600" />
                     </div>
-                    ÖDEME SEÇENEKLERİNE DÖN
-                </button>
-                <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 px-4 py-2 rounded-full border border-emerald-100 shadow-sm">
-                    <ShieldCheck size={16} />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Güvenli Ödeme Katmanı</span>
+                </div>
+
+                <h1 className="text-3xl font-black text-gray-900 mb-2">Ödemeyi Tamamla</h1>
+                <p className="text-gray-500 mb-8 font-medium">
+                    Sipariş numaranız: <span className="text-gray-900 font-bold">#{state.orderId}</span>
+                </p>
+
+                <div className="bg-gray-50 rounded-2xl p-6 mb-8 flex justify-between items-center">
+                    <span className="text-gray-600 font-bold uppercase tracking-wider text-sm">Ödenecek Tutar</span>
+                    <span className="text-2xl font-black text-blue-600">
+            {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(state.amount)}
+          </span>
+                </div>
+
+                {error && (
+                    <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 text-sm font-bold">
+                        <AlertCircle size={20} /> {error}
+                    </div>
+                )}
+
+                {/* Iyzico Formunun Yerleşeceği Alan */}
+                <div id="iyzipay-checkout-form" className="mb-6"></div>
+
+                {!isProcessing && !document.getElementById("iyzipay-checkout-form")?.innerHTML && (
+                    <button
+                        onClick={handleStartPayment}
+                        className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-95"
+                    >
+                        ÖDEMEYE BAŞLA <ShieldCheck size={24} />
+                    </button>
+                )}
+
+                {isProcessing && (
+                    <div className="flex flex-col items-center gap-4 py-4">
+                        <Loader2 className="animate-spin text-blue-600" size={40} />
+                        <p className="text-gray-500 font-bold animate-pulse text-sm">Iyzico Güvenli Ödeme Ekranı Yükleniyor...</p>
+                    </div>
+                )}
+
+                <div className="mt-8 flex items-center justify-center gap-6 opacity-40 grayscale">
+                    <img src="https://www.iyzico.com/assets/images/logo.svg" alt="Iyzico" className="h-6" />
+                    <div className="h-4 w-[1px] bg-gray-400"></div>
+                    <span className="text-[10px] font-bold tracking-tighter uppercase text-gray-500">256-Bit SSL Security</span>
                 </div>
             </motion.div>
-
-            <main className="w-full max-w-2xl">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl shadow-slate-200/60 overflow-hidden border border-white relative">
-
-                    {/* Sipariş Bilgi Şeridi */}
-                    <div className="bg-slate-900 p-8 text-white flex justify-between items-center">
-                        <div>
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Ödenecek Tutar</p>
-                            <h1 className="text-3xl font-black italic">
-                                {totalPrice ? `${new Intl.NumberFormat("tr-TR").format(totalPrice)} TL` : "---"}
-                            </h1>
-                        </div>
-                        <div className="text-right">
-                            <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Sipariş No</p>
-                            <p className="font-mono font-bold text-indigo-400">#{orderId}</p>
-                        </div>
-                    </div>
-
-                    <div className="p-10 relative min-h-[400px]">
-                        {/* Yükleme Ekranı */}
-                        <AnimatePresence>
-                            {loading && (
-                                <motion.div
-                                    exit={{ opacity: 0 }}
-                                    className="absolute inset-0 flex flex-col items-center justify-center bg-white z-10"
-                                >
-                                    <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mb-4" />
-                                    <p className="text-slate-400 font-bold animate-pulse text-sm">İyzico ödeme formu hazırlanıyor...</p>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Hata Ekranı */}
-                        {error && (
-                            <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                className="flex flex-col items-center justify-center py-12 text-center"
-                            >
-                                <div className="bg-red-50 p-4 rounded-full mb-4">
-                                    <AlertCircle size={40} className="text-red-500" />
-                                </div>
-                                <h3 className="text-xl font-black text-slate-800 mb-2">Hata Oluştu</h3>
-                                <p className="text-slate-500 max-w-xs mx-auto mb-6 font-medium text-sm">{error}</p>
-                                <button
-                                    onClick={() => window.location.reload()}
-                                    className="bg-slate-900 text-white px-8 py-3 rounded-xl font-black hover:bg-slate-800 transition-all active:scale-95"
-                                >
-                                    TEKRAR DENE
-                                </button>
-                            </motion.div>
-                        )}
-
-                        {/* İyzico Form Konteynırı */}
-                        <div
-                            id="iyzipay-checkout-form"
-                            className={`responsive ${loading || error ? 'hidden' : 'block'}`}
-                        >
-                            {/* Script buraya inject edilecek */}
-                        </div>
-                    </div>
-
-                    {/* Alt Bilgi */}
-                    <div className="p-6 bg-slate-50 border-t border-slate-100 flex items-center justify-center gap-8">
-                        <div className="flex items-center gap-2 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-                            <Lock size={14} className="text-slate-400" />
-                            <span className="text-[10px] font-bold text-slate-400 tracking-tighter uppercase">PCI-DSS Compliant</span>
-                        </div>
-                        <div className="flex items-center gap-2 grayscale opacity-50 hover:grayscale-0 hover:opacity-100 transition-all cursor-default">
-                            <CreditCard size={14} className="text-slate-400" />
-                            <span className="text-[10px] font-bold text-slate-400 tracking-tighter uppercase">SSL Secured</span>
-                        </div>
-                    </div>
-                </div>
-
-                <p className="mt-8 text-center text-slate-400 text-[9px] uppercase font-black tracking-[0.3em] max-w-md mx-auto leading-relaxed">
-                    Ödeme işleminiz iyzico tarafından 256-bit SSL şifreleme teknolojisi ile güvence altına alınmıştır.
-                </p>
-            </main>
         </div>
     );
 };
 
-export default IyzicoPage;
+export default Iyzico;

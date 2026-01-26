@@ -69,7 +69,7 @@ const PaginatedProducts: FC<Props> = ({ products, isLoading, initialRows = 5 }) 
                                 onClick={() => setRowsToShow((r) => r + initialRows)}
                                 className="px-4 py-2 rounded-md border dark:border-neutral-700 dark:text-white hover:shadow bg-blue-300"
                             >
-                             View More
+                           Daha Fazla Göster
                             </button>
                         </div>
                     )}
