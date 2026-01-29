@@ -1,11 +1,9 @@
 import { useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, Link } from "react-router-dom"; // Link eklendi
 import { motion } from "framer-motion";
 import { CreditCard, Loader2, AlertCircle, ShieldCheck, ArrowLeft } from "lucide-react";
 import { Config } from "../helpers/Config.tsx";
-import { IyzicoNavigationState } from "./OrderPage"; // Tipleri oradan çekiyoruz
-
-// --- Tip Tanımlamaları ---
+import { IyzicoNavigationState } from "./OrderPage";
 
 interface PaymentRequest {
     orderId: number;
@@ -13,12 +11,12 @@ interface PaymentRequest {
     amount: number;
     currency: string;
     provider: string;
-    addressId: number; // Bu değerin OrderPage'den gelmesi idealdir
+    addressId: number;
 }
 
 interface PaymentResponse {
-    paymentPageUrl?: string; // Bazı senaryolarda URL döner
-    checkoutFormContent?: string; // HTML script içeriği
+    paymentPageUrl?: string;
+    checkoutFormContent?: string;
     status: string;
 }
 
@@ -28,9 +26,9 @@ const Iyzico = () => {
     const state = location.state as IyzicoNavigationState | null;
 
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
+    const [isAgreed, setIsAgreed] = useState<boolean>(false); // Sözleşme onayı state'i
     const [error, setError] = useState<string | null>(null);
 
-    // Sayfa yüklendiğinde state kontrolü
     useEffect(() => {
         if (!state) {
             navigate("/cart");
@@ -38,62 +36,52 @@ const Iyzico = () => {
     }, [state, navigate]);
 
     const handleStartPayment = async () => {
+        if (!isAgreed) {
+            setError("Lütfen devam etmeden önce sözleşmeleri onaylayın.");
+            return;
+        }
         if (!state) return;
 
         setIsProcessing(true);
         setError(null);
 
-        // Belirttiğin request body formatı
         const paymentRequest: PaymentRequest = {
             orderId: state.orderId,
             method: "CREDIT_CARD",
             amount: state.amount,
             currency: "TRY",
             provider: "IYZICO",
-            addressId: 24, // Sabit verdik, dinamik olması için OrderPage'den taşınmalı
+            addressId: 24,
         };
 
         try {
             const response = await fetch(`${Config.api.baseUrl}/api/payments/iyzico-start`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(paymentRequest),
             });
 
             if (!response.ok) throw new Error("Ödeme başlatılamadı.");
-
             const result: PaymentResponse = await response.json();
 
             if (result.checkoutFormContent) {
-                // Iyzico'nun gönderdiği script içeriğini sayfaya enjekte ediyoruz
                 const checkoutDiv = document.getElementById("iyzipay-checkout-form");
                 if (checkoutDiv) {
-                    // Önceki içeriği temizle
                     checkoutDiv.innerHTML = result.checkoutFormContent;
-
-                    // Script tag'lerini manuel olarak çalıştırmamız gerekebilir
                     const scripts = checkoutDiv.getElementsByTagName("script");
                     for (let i = 0; i < scripts.length; i++) {
                         const script = document.createElement("script");
                         script.type = "text/javascript";
-                        if (scripts[i].src) {
-                            script.src = scripts[i].src;
-                        } else {
-                            script.textContent = scripts[i].textContent;
-                        }
+                        if (scripts[i].src) script.src = scripts[i].src;
+                        else script.textContent = scripts[i].textContent;
                         document.head.appendChild(script);
                     }
                 }
             } else if (result.paymentPageUrl) {
-                // Eğer script değil de URL dönerse oraya yönlendir
                 window.location.href = result.paymentPageUrl;
             }
-
         } catch (err) {
             setError("Ödeme sistemiyle bağlantı kurulamadı. Lütfen tekrar deneyin.");
-            console.error(err);
         } finally {
             setIsProcessing(false);
         }
@@ -126,12 +114,34 @@ const Iyzico = () => {
                     Sipariş numaranız: <span className="text-gray-900 font-bold">#{state.orderId}</span>
                 </p>
 
-                <div className="bg-gray-50 rounded-2xl p-6 mb-8 flex justify-between items-center">
+                <div className="bg-gray-50 rounded-2xl p-6 mb-6 flex justify-between items-center">
                     <span className="text-gray-600 font-bold uppercase tracking-wider text-sm">Ödenecek Tutar</span>
                     <span className="text-2xl font-black text-blue-600">
-            {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(state.amount)}
-          </span>
+                        {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(state.amount)}
+                    </span>
                 </div>
+
+                {/* --- SÖZLEŞME ONAY KUTUSU --- */}
+                <div className="mb-8 p-4 bg-blue-50/50 rounded-2xl border border-blue-100 text-left">
+                    <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative flex items-center mt-1">
+                            <input
+                                type="checkbox"
+                                checked={isAgreed}
+                                onChange={(e) => setIsAgreed(e.target.checked)}
+                                className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-300 bg-white checked:bg-blue-600 checked:border-blue-600 transition-all"
+                            />
+                            <svg className="absolute w-3.5 h-3.5 mt-0.5 ml-0.5 text-white hidden peer-checked:block pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        </div>
+                        <span className="text-sm font-bold text-gray-600 leading-tight">
+                            <Link to="/documents" className="text-blue-600 underline hover:text-blue-800">Gizlilik Politikası</Link>,{" "}
+                            <Link to="/documents" className="text-blue-600 underline hover:text-blue-800">Teslimat ve İade</Link> ve{" "}
+                            <Link to="/documents" className="text-blue-600 underline hover:text-blue-800">Mesafeli Satış Sözleşmesi</Link>'ni
+                            okudum, onaylıyorum.
+                        </span>
+                    </label>
+                </div>
+                {/* --------------------------- */}
 
                 {error && (
                     <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 text-sm font-bold">
@@ -139,13 +149,15 @@ const Iyzico = () => {
                     </div>
                 )}
 
-                {/* Iyzico Formunun Yerleşeceği Alan */}
                 <div id="iyzipay-checkout-form" className="mb-6"></div>
 
                 {!isProcessing && !document.getElementById("iyzipay-checkout-form")?.innerHTML && (
                     <button
                         onClick={handleStartPayment}
-                        className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-95"
+                        disabled={!isAgreed} // Onaylanmadan buton aktif olmaz
+                        className={`w-full py-5 rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-95 ${
+                            isAgreed ? "bg-slate-900 hover:bg-slate-800 text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        }`}
                     >
                         ÖDEMEYE BAŞLA <ShieldCheck size={24} />
                     </button>
@@ -158,10 +170,12 @@ const Iyzico = () => {
                     </div>
                 )}
 
-                <div className="mt-8 flex items-center justify-center gap-6 opacity-40 grayscale">
-                    <img src="https://www.iyzico.com/assets/images/logo.svg" alt="Iyzico" className="h-6" />
+                <div className="mt-8 flex items-center justify-center gap-6">
+                    <img src="/logo_band_colored@3x.png" alt="Iyzico" className="h-6 transition-all hover:scale-105" />
                     <div className="h-4 w-[1px] bg-gray-400"></div>
-                    <span className="text-[10px] font-bold tracking-tighter uppercase text-gray-500">256-Bit SSL Security</span>
+                    <span className="text-[10px] font-bold tracking-tighter uppercase text-gray-500">
+                        256-Bit SSL Security
+                    </span>
                 </div>
             </motion.div>
         </div>

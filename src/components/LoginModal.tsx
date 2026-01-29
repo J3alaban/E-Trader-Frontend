@@ -171,5 +171,3 @@ const LoginModal: FC = () => {
 };
 
 export default LoginModal;
-
-

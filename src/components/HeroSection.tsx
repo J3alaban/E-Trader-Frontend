@@ -1,58 +1,25 @@
 import { FC, useState, useEffect } from "react";
 
 const images = [
-  {
-    url: "/hero1.png",
-    title: "Hidrolik Güç Üniteleri",
-    desc: "Endüstriyel tesisler için yüksek verimli, özel tasarım güç paketleri.",
-  },
-  {
-    url: "/hero2.png",
-    title: "Silindir Teknolojileri",
-    desc: "Ağır hizmet tipi, sızdırmazlık garantili özel üretim hidrolik silindirler.",
-  },
-  {
-    url: "/hero3.png",
-    title: "Valf Blokları",
-    desc: "Hassas kontrol sağlayan, yüksek basınç dayanımlı manifold çözümleri.",
-  },
-  {
-    url: "/hero4.png",
-    title: "Mobil Hidrolik",
-    desc: "İş makineleri ve araç üstü ekipmanlar için dayanıklı mobil sistemler.",
-  },
-  {
-    url: "/hero5.png",
-    title: "Filtrasyon Sistemleri",
-    desc: "Sistem ömrünü uzatan, yüksek verimli yağ temizleme çözümleri.",
-  },
-  {
-    url: "/hero6.png",
-    title: "Hortum ve Bağlantı",
-    desc: "Sızdırmazlık odaklı, yüksek basınca dayanıklı bağlantı elemanları.",
-  },
-  {
-    url: "/hero7.png",
-    title: "Oransal Kontrol",
-    desc: "Elektronik kontrollü hidrolik sistemler ile maksimum hassasiyet.",
-  },
-  {
-    url: "/hero8.png",
-    title: "Teknik Bakım",
-    desc: "Yerinde arıza tespiti ve periyodik hidrolik sistem revizyonu.",
-  },
+  { url: "/hero1.png", title: "Hidrolik Güç Üniteleri", desc: "Endüstriyel tesisler için yüksek verimli, özel tasarım güç paketleri." },
+  { url: "/hero2.png", title: "Silindir Teknolojileri", desc: "Ağır hizmet tipi, sızdırmazlık garantili özel üretim hidrolik silindirler." },
+  { url: "/hero3.png", title: "Valf Blokları", desc: "Hassas kontrol sağlayan, yüksek basınç dayanımlı manifold çözümleri." },
+  { url: "/hero4.png", title: "Mobil Hidrolik", desc: "İş makineleri ve araç üstü ekipmanlar için dayanıklı mobil sistemler." },
+  { url: "/hero5.png", title: "Filtrasyon Sistemleri", desc: "Sistem ömrünü uzatan, yüksek verimli yağ temizleme çözümleri." },
+  { url: "/hero6.png", title: "Hortum ve Bağlantı", desc: "Sızdırmazlık odaklı, yüksek basınca dayanıklı bağlantı elemanları." },
+  { url: "/hero7.png", title: "Oransal Kontrol", desc: "Elektronik kontrollü hidrolik sistemler ile maksimum hassasiyet." },
+  { url: "/hero8.png", title: "Teknik Bakım", desc: "Yerinde arıza tespiti ve periyodik hidrolik sistem revizyonu." },
 ];
 
 const HeroSection: FC = () => {
   const [active, setActive] = useState(0);
 
-  // 8 fotoğraf olduğu için geçiş süresini biraz kısalttık
   useEffect(() => {
     const interval = setInterval(() => {
       setActive((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-    }, 5000);
+    }, 3500);
     return () => clearInterval(interval);
-  }, [active]);
+  }, []);
 
   return (
       <section className="bg-[#f0f4f8] dark:bg-slate-950 py-12 px-4 overflow-hidden">
@@ -61,14 +28,13 @@ const HeroSection: FC = () => {
             {images.map((img, idx) => (
                 <div
                     key={idx}
-                    onMouseEnter={() => setActive(idx)} // 8 kartta tıklama yerine hover daha akıcıdır
+                    onClick={() => setActive(idx)}
                     className={`relative overflow-hidden rounded-2xl cursor-pointer transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] shadow-lg ${
                         active === idx
-                            ? "flex-[12] md:flex-[8]" // Aktif olan çok daha geniş
+                            ? "flex-[12] md:flex-[8]"
                             : "flex-[2] md:flex-1 opacity-70 hover:opacity-100"
                     }`}
                 >
-                  {/* Arka Plan Görseli */}
                   <img
                       src={img.url}
                       alt={img.title}
@@ -77,7 +43,6 @@ const HeroSection: FC = () => {
                       }`}
                   />
 
-                  {/* Overlay: Aktif kartta daha koyu, pasif kartta orta derece */}
                   <div
                       className={`absolute inset-0 transition-all duration-500 ${
                           active === idx
@@ -86,7 +51,6 @@ const HeroSection: FC = () => {
                       }`}
                   />
 
-                  {/* Aktif Metin İçeriği */}
                   <div
                       className={`absolute bottom-12 left-8 right-8 transition-all duration-500 ${
                           active === idx
@@ -106,10 +70,8 @@ const HeroSection: FC = () => {
                     <p className="text-gray-300 text-sm md:text-lg max-w-lg leading-relaxed mb-6 font-light">
                       {img.desc}
                     </p>
-
                   </div>
 
-                  {/* Pasif Durumda Dikey Numara veya Başlık */}
                   <div
                       className={`absolute inset-0 flex items-center justify-center transition-opacity duration-500 ${
                           active === idx ? "opacity-0" : "opacity-100"
