@@ -1,55 +1,23 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // Link eklendi
 import { motion } from "framer-motion";
 import { CheckCircle2, CreditCard, ArrowLeft, Loader2, ShieldCheck } from "lucide-react";
 import { Config } from "../helpers/Config.tsx";
 
 // --- Tip Tanımlamaları ---
-
-interface CartItem {
-    id: number;
-    productId: number;
-    productTitle: string;
-    price: number;
-    quantity: number;
-}
-
-interface CartResponse {
-    cartId: number;
-    userId: number;
-    items: CartItem[];
-    totalPrice: number;
-}
-
-interface OrderItemRequest {
-    productId: number;
-    quantity: number;
-}
-
-interface OrderRequest {
-    userId: number;
-    items: OrderItemRequest[];
-    totalPrice: number;
-    orderDate: string;
-}
-
-interface OrderSuccessResponse {
-    id: number;
-    status: string;
-    // Backend'den dönen diğer olası alanları buraya ekleyebilirsin
-}
-
-// Iyzico sayfasına gönderilecek state tipi
-export interface IyzicoNavigationState {
-    orderId: number;
-    amount: number;
-    userId: string;
-}
+// (Mevcut interfaceler aynen kalıyor...)
+interface CartItem { id: number; productId: number; productTitle: string; price: number; quantity: number; }
+interface CartResponse { cartId: number; userId: number; items: CartItem[]; totalPrice: number; }
+interface OrderItemRequest { productId: number; quantity: number; }
+interface OrderRequest { userId: number; items: OrderItemRequest[]; totalPrice: number; orderDate: string; }
+interface OrderSuccessResponse { id: number; status: string; }
+export interface IyzicoNavigationState { orderId: number; amount: number; userId: string; }
 
 const OrderPage = () => {
     const [cart, setCart] = useState<CartResponse | null>(null);
     const [loading, setLoading] = useState<boolean>(true);
     const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [isAgreed, setIsAgreed] = useState<boolean>(false); // Sözleşme onayı için state
 
     const navigate = useNavigate();
     const storedUserId = localStorage.getItem("userId");
@@ -61,7 +29,6 @@ const OrderPage = () => {
             minimumFractionDigits: 2,
         }).format(value);
 
-    // 1. Sepet Verilerini Çek
     useEffect(() => {
         if (!storedUserId) {
             navigate("/login");
@@ -84,9 +51,9 @@ const OrderPage = () => {
         fetchCart();
     }, [storedUserId, navigate]);
 
-    // 2. Siparişi Oluştur ve Ödemeye Yönlendir
     const handleCompleteOrder = async (): Promise<void> => {
-        if (!cart || !storedUserId) return;
+        // Güvenlik: Checkbox işaretli değilse fonksiyonu çalıştırma
+        if (!cart || !storedUserId || !isAgreed) return;
 
         setIsSubmitting(true);
 
@@ -97,16 +64,13 @@ const OrderPage = () => {
                 quantity: item.quantity,
             })),
             totalPrice: cart.totalPrice,
-            // Format: YYYY-MM-DDTHH:mm:ss
             orderDate: new Date().toISOString().split('.')[0],
         };
 
         try {
             const response = await fetch(`${Config.api.baseUrl}/api/v1/orders`, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(orderBody),
             });
 
@@ -114,7 +78,6 @@ const OrderPage = () => {
 
             const orderResult: OrderSuccessResponse = await response.json();
 
-            // Iyzico sayfasına veri göndererek yönlendir
             const navigationState: IyzicoNavigationState = {
                 orderId: orderResult.id,
                 amount: cart.totalPrice,
@@ -151,7 +114,7 @@ const OrderPage = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
 
-                {/* Sol Taraf: Sipariş Detayları */}
+                {/* Sol Taraf */}
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -175,23 +138,23 @@ const OrderPage = () => {
                             {cart?.items.map((item) => (
                                 <div key={item.productId} className="flex justify-between items-center py-4 border-b border-gray-50 last:border-0">
                                     <div className="flex flex-col">
-                    <span className="font-extrabold text-gray-800 uppercase text-md">
-                      {item.productTitle}
-                    </span>
+                                        <span className="font-extrabold text-gray-800 uppercase text-md">
+                                            {item.productTitle}
+                                        </span>
                                         <span className="text-sm text-gray-500 font-medium">
-                      {item.quantity} Adet × {formatCurrency(item.price)}
-                    </span>
+                                            {item.quantity} Adet × {formatCurrency(item.price)}
+                                        </span>
                                     </div>
                                     <span className="font-black text-gray-900">
-                    {formatCurrency(item.price * item.quantity)}
-                  </span>
+                                        {formatCurrency(item.price * item.quantity)}
+                                    </span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </motion.div>
 
-                {/* Sağ Taraf: Ödeme ve Checkout */}
+                {/* Sağ Taraf */}
                 <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -216,10 +179,30 @@ const OrderPage = () => {
                             </div>
                         </div>
 
+                        {/* --- SÖZLEŞME ONAY KUTUSU --- */}
+                        <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700 text-left">
+                            <label className="flex items-start gap-3 cursor-pointer group">
+                                <div className="relative flex items-center mt-1">
+                                    <input
+                                        type="checkbox"
+                                        checked={isAgreed}
+                                        onChange={(e) => setIsAgreed(e.target.checked)}
+                                        className="peer h-5 w-5 cursor-pointer appearance-none rounded border border-slate-600 bg-slate-800 checked:bg-blue-600 checked:border-blue-600 transition-all"
+                                    />
+                                    <svg className="absolute w-3.5 h-3.5 mt-0.5 ml-0.5 text-white hidden peer-checked:block pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </div>
+                                <span className="text-[12px] font-medium text-slate-300 leading-snug">
+                                    <Link to="/documents" className="text-blue-400 underline hover:text-blue-300">Gizlilik Politikası</Link>,{" "}
+                                    <Link to="/documents" className="text-blue-400 underline hover:text-blue-300">Teslimat ve İade</Link> ve{" "}
+                                    <Link to="/documents" className="text-blue-400 underline hover:text-blue-300">Mesafeli Satış Sözleşmesi</Link>'ni okudum, onaylıyorum.
+                                </span>
+                            </label>
+                        </div>
+
                         <button
                             onClick={handleCompleteOrder}
-                            disabled={isSubmitting}
-                            className="w-full py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg shadow-blue-600/20"
+                            disabled={isSubmitting || !isAgreed}
+                            className="w-full py-5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-95 shadow-lg shadow-blue-600/20"
                         >
                             {isSubmitting ? (
                                 <Loader2 className="animate-spin" size={24} />
@@ -231,7 +214,7 @@ const OrderPage = () => {
                         <div className="mt-6 pt-6 border-t border-slate-800 flex flex-col items-center gap-2">
                             <span className="text-[10px] text-slate-500 uppercase font-bold tracking-[0.2em]">Powered by</span>
                             <img
-                                src="https://www.iyzico.com/assets/images/logo.svg?v=1"
+                                src="/iyzico_ile_ode_white.png"
                                 alt="Iyzico"
                                 className="h-5 opacity-50 grayscale hover:grayscale-0 transition-all"
                             />

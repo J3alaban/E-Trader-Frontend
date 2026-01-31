@@ -82,6 +82,13 @@ const Navbar: FC = () => {
                             >
                                 Kategoriler
                             </Link>
+                            {/* HAKKIMIZDA LİNKİ EKLENDİ */}
+                            <Link
+                                to="/about"
+                                className="hover:text-blue-500 font-semibold"
+                            >
+                                Hakkımızda
+                            </Link>
                             {role === "ADMIN" && (
                                 <Link to="/admin" className="text-red-500 font-semibold">
                                     Admin Paneli
@@ -144,6 +151,7 @@ const Navbar: FC = () => {
                         <div className="flex flex-col items-center gap-8 text-2xl font-bold dark:text-white">
                             <Link to="/products" onClick={() => setIsMenuOpen(false)}>Ürünler</Link>
                             <Link to="/categories" onClick={() => setIsMenuOpen(false)}>Kategoriler</Link>
+                            <Link to="/about" onClick={() => setIsMenuOpen(false)}>Hakkımızda</Link> {/* MOBİL LİNK */}
                             {role === "ADMIN" && (
                                 <Link to="/admin" onClick={() => setIsMenuOpen(false)} className="text-red-500">Admin Paneli</Link>
                             )}

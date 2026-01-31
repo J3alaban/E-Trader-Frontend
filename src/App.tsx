@@ -31,6 +31,7 @@ import VerifyEmail from "./pages/VerifyEmail";
 import Iyzico from "./pages/Iyzico";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import Documents from "./pages/Documents.tsx";
+import About from "./pages/About.tsx";
 
 function App() {
   return (
@@ -61,6 +62,7 @@ function App() {
           <Route path="/Iyzico" element={<Iyzico />} />
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/documents" element={<Documents />} />
+          <Route path="/about" element={<About />} />
 
 
 
