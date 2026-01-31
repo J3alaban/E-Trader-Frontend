@@ -1,3 +1,4 @@
+import React from 'react';
 import { FileText, Download, Eye, Gavel } from 'lucide-react';
 
 const documents = [
@@ -9,15 +10,24 @@ const documents = [
 ];
 
 const Documents = () => {
+    // Sayfa içi kaydırma (smooth scroll) için yardımcı fonksiyon
+    const scrollToDoc = (id) => {
+        const element = document.getElementById(`view-${id}`);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
+
     return (
         <div className="p-8 bg-gray-50 min-h-screen">
             <div className="max-w-4xl mx-auto">
+                {/* Üst Kısım: Başlık ve İndirme Kartları */}
                 <div className="flex items-center gap-3 mb-8 border-b pb-4">
                     <Gavel className="text-blue-600" size={32} />
                     <h2 className="text-2xl font-bold text-gray-800">Hukuki Belgeler ve Sözleşmeler</h2>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-16">
                     {documents.map((doc) => (
                         <div
                             key={doc.id}
@@ -42,15 +52,40 @@ const Documents = () => {
                                 >
                                     <Download size={20} />
                                 </a>
-                                <a
-                                    href={`/${doc.fileName}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
+                                <button
+                                    onClick={() => scrollToDoc(doc.id)}
                                     className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
-                                    title="Görüntüle"
+                                    title="Aşağıda Görüntüle"
                                 >
                                     <Eye size={20} />
-                                </a>
+                                </button>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Alt Kısım: Belge Görüntüleme Alanı */}
+                <div className="space-y-12">
+                    <h3 className="text-xl font-semibold text-gray-600 flex items-center gap-2">
+                        <Eye size={24} /> Belge İçerikleri
+                    </h3>
+
+                    {documents.map((doc) => (
+                        <div key={doc.id} id={`view-${doc.id}`} className="bg-white rounded-2xl shadow-lg overflow-hidden border border-gray-200">
+                            <div className="bg-gray-100 p-4 border-b flex justify-between items-center">
+                                <span className="font-bold text-gray-700">{doc.name}</span>
+                                <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-500 uppercase tracking-tighter italic">Önizleme Modu</span>
+                            </div>
+
+                            <div className="w-full aspect-[1/1.4] relative bg-white">
+                                {/* Docx dosyasını görüntülemek için Google Docs Viewer Iframe */}
+                                <iframe
+                                    src={`https://docs.google.com/gview?url=${window.location.origin}/${encodeURIComponent(doc.fileName)}&embedded=true`}
+                                    className="w-full h-full border-none"
+                                    title={doc.name}
+                                />
+                                {/* Not: Yerel (localhost) üzerinde çalışırken Google dosyaya erişemez.
+                                    Bu özellik siteniz yayına alındığında aktif olacaktır. */}
                             </div>
                         </div>
                     ))}
