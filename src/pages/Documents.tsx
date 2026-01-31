@@ -1,4 +1,3 @@
-import React from 'react';
 import { FileText, Download, Eye, Gavel } from 'lucide-react';
 
 const documents = [
