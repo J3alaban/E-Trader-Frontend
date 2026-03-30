@@ -32,6 +32,7 @@ import Iyzico from "./pages/Iyzico";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import Documents from "./pages/Documents.tsx";
 import About from "./pages/About.tsx";
+import AllOrdersPage from "./pages/AllOrdersPage";
 
 function App() {
   return (
@@ -63,6 +64,7 @@ function App() {
           <Route path="/payment-success" element={<PaymentSuccess />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/about" element={<About />} />
+          <Route path="/orders" element={<AllOrdersPage />} />
 
 
 

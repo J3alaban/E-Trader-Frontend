@@ -1,6 +1,12 @@
 import { FileText, Download, Eye, Gavel } from 'lucide-react';
 
-const documents = [
+interface Document {
+    id: number;
+    name: string;
+    fileName: string;
+}
+
+const documents: Document[] = [
     { id: 1, name: 'Mesafeli Satış Sözleşmesi', fileName: 'demiray Mesafeli Satış Sözleşmesi.docx' },
     { id: 2, name: 'Kargo ve Teslimat', fileName: 'demiray Kargo ve Teslimat.docx' },
     { id: 3, name: 'Kullanım Koşulları', fileName: 'demiray Üyelik ve Kullanım Şartları.docx' },
@@ -10,7 +16,7 @@ const documents = [
 
 const Documents = () => {
     // Sayfa içi kaydırma (smooth scroll) için yardımcı fonksiyon
-    const scrollToDoc = (id) => {
+    const scrollToDoc = (id: number) => {
         const element = document.getElementById(`view-${id}`);
         if (element) {
             element.scrollIntoView({ behavior: 'smooth' });
@@ -77,14 +83,11 @@ const Documents = () => {
                             </div>
 
                             <div className="w-full aspect-[1/1.4] relative bg-white">
-                                {/* Docx dosyasını görüntülemek için Google Docs Viewer Iframe */}
                                 <iframe
                                     src={`https://docs.google.com/gview?url=${window.location.origin}/${encodeURIComponent(doc.fileName)}&embedded=true`}
                                     className="w-full h-full border-none"
                                     title={doc.name}
                                 />
-                                {/* Not: Yerel (localhost) üzerinde çalışırken Google dosyaya erişemez.
-                                    Bu özellik siteniz yayına alındığında aktif olacaktır. */}
                             </div>
                         </div>
                     ))}

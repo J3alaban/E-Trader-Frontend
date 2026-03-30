@@ -6,7 +6,6 @@ import toast from "react-hot-toast";
 import { AiOutlineShoppingCart } from "react-icons/ai";
 import { Link } from "react-router-dom";
 import PriceSection from "./PriceSection";
-import useAuth from "../hooks/useAuth";
 import { Config } from "../helpers/Config";
 import { addToCart } from "../redux/features/cartSlice";
 
@@ -35,51 +34,49 @@ const ProductCard: FC<ProductCardProps> = ({
   onDelete,
 }) => {
   const dispatch = useAppDispatch();
-  const { requireAuth } = useAuth();
 
-  const handleAddToCart = () => {
-    requireAuth(async () => {
-      const storedUserId = localStorage.getItem("userId");
-      if (!storedUserId) {
-        toast.error("User bulunamadı");
-        return;
-      }
+  const handleAddToCart = async () => {
+    let storedUserId = localStorage.getItem("userId");
 
-      try {
-        const res = await fetch(
-          `${Config.api.baseUrl}/api/v1/carts/${storedUserId}/items`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: id, quantity: 1 }),
-          }
-        );
+    if (!storedUserId) {
+      storedUserId = localStorage.getItem("guestId") || crypto.randomUUID();
+      localStorage.setItem("guestId", storedUserId);
+    }
 
-        if (!res.ok) throw new Error();
+    try {
+      const res = await fetch(
+        `${Config.api.baseUrl}/api/v1/carts/${storedUserId}/items`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ productId: id, quantity: 1 }),
+        }
+      );
 
-        const cart = (await res.json()) as { items: CartItem[] };
-        const addedItem = cart.items.find(i => i.productId === id);
+      if (!res.ok) throw new Error();
 
-        if (!addedItem) throw new Error("Ürün sepete eklenemedi");
+      const cart = (await res.json()) as { items: CartItem[] };
+      const addedItem = cart.items.find((i) => i.productId === id);
 
-        dispatch(
-          addToCart({
-            id: addedItem.productId,
-            title: addedItem.productTitle,
-            price: addedItem.price,
-            quantity: addedItem.quantity,
-            thumbnail: thumbnail || images?.[0],
-            category,
-            rating,
-            discountPercentage,
-          })
-        );
+      if (!addedItem) throw new Error("Ürün sepete eklenemedi");
 
-        toast.success("Ürün sepete eklendi");
-      } catch {
-        toast.error("Sepete eklenemedi");
-      }
-    });
+      dispatch(
+        addToCart({
+          id: addedItem.productId,
+          title: addedItem.productTitle,
+          price: addedItem.price,
+          quantity: addedItem.quantity,
+          thumbnail: thumbnail || images?.[0],
+          category,
+          rating,
+          discountPercentage,
+        })
+      );
+
+      toast.success("Ürün sepete eklendi");
+    } catch {
+      toast.error("Sepete eklenemedi");
+    }
   };
 
   return (
@@ -108,15 +105,12 @@ const ProductCard: FC<ProductCardProps> = ({
         <RatingStar rating={rating ?? 0} />
 
         <div className="flex items-center justify-between">
-          <PriceSection
-            price={price}
-            discountPercentage={discountPercentage}
-          />
+          <PriceSection price={price} discountPercentage={discountPercentage} />
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleAddToCart}
-              className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 
+              className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600
                          text-white px-4 py-2 rounded"
             >
               <AiOutlineShoppingCart />
@@ -130,9 +124,9 @@ const ProductCard: FC<ProductCardProps> = ({
                   e.preventDefault();
                   onDelete?.();
                 }}
-                className="px-3 py-1 rounded-md text-xs font-medium 
-                           text-red-600 bg-red-50 hover:bg-red-100 
-                           hover:text-red-700 transition-colors duration-200 
+                className="px-3 py-1 rounded-md text-xs font-medium
+                           text-red-600 bg-red-50 hover:bg-red-100
+                           hover:text-red-700 transition-colors duration-200
                            shadow-sm"
               >
                 Sil
@@ -146,4 +140,3 @@ const ProductCard: FC<ProductCardProps> = ({
 };
 
 export default ProductCard;
-

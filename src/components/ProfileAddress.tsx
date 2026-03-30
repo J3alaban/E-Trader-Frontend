@@ -186,9 +186,9 @@ export default function ProfileAddress() {
         <div className="bg-gray-50 p-4 rounded-lg space-y-3 border mt-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <input name="street" placeholder="Mahalle" value={newAddress.street || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
-            <input name="city" placeholder="Şehir" value={newAddress.city || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
+            <input name="city" placeholder="Tam Adres" value={newAddress.city || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
             <input name="state" placeholder="İlçe" value={newAddress.state || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
-            <input name="zipCode" placeholder="Tam Adres" value={newAddress.zipCode || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
+            <input name="zipCode" placeholder="Şehir" value={newAddress.zipCode || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
             <input name="country" placeholder="Türkiye" value={newAddress.country || ""} onChange={handleNewChange} className="w-full p-2 border rounded focus:ring-2 focus:ring-indigo-400" />
           </div>
           <div className="flex gap-3 mt-2">

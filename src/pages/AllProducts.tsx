@@ -1,9 +1,9 @@
-import { FC, useEffect, useContext } from "react";
+import { FC, useEffect } from "react";
 import { useAppSelector, useAppDispatch } from "../redux/hooks";
 import { addProducts } from "../redux/features/productSlice";
 import { updateLoading } from "../redux/features/homeSlice";
 import { Product } from "../models/Product";
-import { AuthContext } from "../redux/AuthContext";
+
 import SortProducts from "../components/SortProducts";
 import PaginatedProducts from "../components/PaginatedProducts";
 import { Config } from "../helpers/Config";
@@ -12,94 +12,92 @@ import { Config } from "../helpers/Config";
 const AllProducts: FC = () => {
 
 
-  
-  const dispatch = useAppDispatch();
-  const { token } = useContext(AuthContext)!;
- // const API_URL = Config.api.baseUrl;
-  const handleSort = (sortedProducts: Product[]) => {
-  dispatch(addProducts(sortedProducts));
-};
-                     // localStorage.setItem("userId", data.id);
-  const allProducts = useAppSelector(
-    state => state.productReducer.allProducts ?? []
-  );
+
+    const dispatch = useAppDispatch();
+
+    // const API_URL = Config.api.baseUrl;
+    const handleSort = (sortedProducts: Product[]) => {
+        dispatch(addProducts(sortedProducts));
+    };
+    // localStorage.setItem("userId", data.id);
+    const allProducts = useAppSelector(
+        state => state.productReducer.allProducts ?? []
+    );
 
 
 
 
-  const isLoading = useAppSelector(
-    state => state.homeReducer.isLoading
-  );
+    const isLoading = useAppSelector(
+        state => state.homeReducer.isLoading
+    );
 
 
-useEffect(() => {
-  dispatch(updateLoading(true));
+    useEffect(() => {
+        dispatch(updateLoading(true));
 
-  fetch(`${Config.api.baseUrl}/api/v1/products`)
-    .then(res => res.json())
-    .then((data: { content: Product[] }) => {
-   const productIds = data.content.map(p => p.id);
+        fetch(`${Config.api.baseUrl}/api/v1/products`)
+            .then(res => res.json())
+            .then((data: { content: Product[] }) => {
+                const productIds = data.content.map(p => p.id);
 
-localStorage.setItem("productIds", JSON.stringify(productIds));  // başka bir bileşende kullanılmak üzere productIds'yi localStorage a kaydettik
-localStorage.setItem("products", JSON.stringify(data.content)); // başka bir bileşende kullanılmak üzere products'ı localStorage a kaydettik
-console.log(data.content)
-
-console.log("productIds:", productIds);
-console.log("Api den dönen içerik  : /*******/  " , data)
-
-      dispatch(addProducts(data.content));
-    })
-    .finally(() => {
-      dispatch(updateLoading(false));
-    });
-
-}, [dispatch]);
+                localStorage.setItem("productIds", JSON.stringify(productIds));  // başka bir bileşende kullanılmak üzere productIds'yi localStorage a kaydettik
+                localStorage.setItem("products", JSON.stringify(data.content)); // başka bir bileşende kullanılmak üzere products'ı localStorage a kaydettik
 
 
-  /*
-  
-  useEffect(() => {
-    if (!token) return;
 
-    dispatch(updateLoading(true));
+                dispatch(addProducts(data.content));
+            })
+            .finally(() => {
+                dispatch(updateLoading(false));
+            });
 
-    fetch(`${Config.api.baseUrl}/api/v1/products`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(res => res.json())
-      .then((data: { content: Product[] }) => {
-        dispatch(addProducts(data.content));
+    }, [dispatch]);
+
+
+    /*
+
+    useEffect(() => {
+      if (!token) return;
+
+      dispatch(updateLoading(true));
+
+      fetch(`${Config.api.baseUrl}/api/v1/products`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
       })
-      .finally(() => {
-        dispatch(updateLoading(false));
-      });
-  }, [dispatch, token]);
+        .then(res => res.json())
+        .then((data: { content: Product[] }) => {
+          dispatch(addProducts(data.content));
+        })
+        .finally(() => {
+          dispatch(updateLoading(false));
+        });
+    }, [dispatch, token]);
 
-  */
-     console.log("Apiden gelen token : " +  token);
-   
-  return (
-    <div className="container mx-auto min-h-[83vh] p-4 font-karla">
-      <div className="grid grid-cols-4 gap-1">
-        <div className="col-span-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <span className="text-lg dark:text-white">Ürünler</span>
-            <SortProducts
-             products={allProducts} 
-             onChange={handleSort}/>
-          </div>
+    */
 
-          <PaginatedProducts
-            products={allProducts}
-            isLoading={isLoading}
-            initialRows={5}
-          />
+
+    return (
+        <div className="container mx-auto min-h-[83vh] p-4 font-karla">
+            <div className="grid grid-cols-4 gap-1">
+                <div className="col-span-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-lg dark:text-white">Ürünler</span>
+                        <SortProducts
+                            products={allProducts}
+                            onChange={handleSort}/>
+                    </div>
+
+                    <PaginatedProducts
+                        products={allProducts}
+                        isLoading={isLoading}
+                        initialRows={5}
+                    />
+                </div>
+            </div>
         </div>
-      </div>
-    </div>
-  );
+    );
 };
 
 
