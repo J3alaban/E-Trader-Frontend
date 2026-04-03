@@ -1,171 +1,220 @@
 import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CreditCard, Loader2, AlertCircle, ShieldCheck, ArrowLeft } from "lucide-react";
+import { CreditCard, Loader2, AlertCircle, ShieldCheck, ArrowLeft, MapPin } from "lucide-react";
 import { Config } from "../helpers/Config.tsx";
-import { IyzicoNavigationState } from "./OrderPage"; // Tipleri oradan çekiyoruz
 
-// --- Tip Tanımlamaları ---
-
-interface PaymentRequest {
-    orderId: number;
-    method: string;
-    amount: number;
-    currency: string;
-    provider: string;
-    addressId: number; // Bu değerin OrderPage'den gelmesi idealdir
-}
-
-interface PaymentResponse {
-    paymentPageUrl?: string; // Bazı senaryolarda URL döner
-    checkoutFormContent?: string; // HTML script içeriği
-    status: string;
+interface IyzicoNavigationState {
+  orderId: number;
+  amount: number;
+  userId: string | number;
+  // Guest buyer bilgileri — OrderPage'den taşınır
+  guestName:  string | null;
+  guestEmail: string | null;
+  guestPhone: string | null;
 }
 
 const Iyzico = () => {
-    const location = useLocation();
-    const navigate = useNavigate();
-    const state = location.state as IyzicoNavigationState | null;
+  const location = useLocation();
+  const navigate = useNavigate();
+  const state = location.state as IyzicoNavigationState | null;
 
-    const [isProcessing, setIsProcessing] = useState<boolean>(false);
-    const [error, setError] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | null>(null);
+  const [guestAddress, setGuestAddress] = useState("");
 
-    // Sayfa yüklendiğinde state kontrolü
-    useEffect(() => {
-        if (!state) {
-            navigate("/cart");
-        }
-    }, [state, navigate]);
+  const userId = state?.userId ?? localStorage.getItem("userId") ?? "guest";
 
-    const handleStartPayment = async () => {
-        if (!state) return;
+  useEffect(() => {
+    if (!state) navigate("/cart");
+  }, [state, navigate]);
 
-        setIsProcessing(true);
-        setError(null);
+  // Kayıtlı kullanıcı adreslerini getir
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      if (!userId || userId === "guest") return;
+      try {
+        const res = await fetch(`${Config.api.baseUrl}/api/v1/users/${userId}/addresses`);
+        if (!res.ok) throw new Error("Adresler yüklenemedi.");
+        const data = await res.json();
+        setAddresses(Array.isArray(data) ? data : data?.addresses || []);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchAddresses();
+  }, [userId]);
 
-        // Belirttiğin request body formatı
-        const paymentRequest: PaymentRequest = {
-            orderId: state.orderId,
-            method: "CREDIT_CARD",
-            amount: state.amount,
-            currency: "TRY",
-            provider: "IYZICO",
-            addressId: 24, // Sabit verdik, dinamik olması için OrderPage'den taşınmalı
-        };
+  const renderIyzicoForm = (checkoutFormContent: string) => {
+    const container = document.getElementById("iyzipay-checkout-form");
+    if (!container) return;
 
-        try {
-            const response = await fetch(`${Config.api.baseUrl}/api/payments/iyzico-start`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify(paymentRequest),
-            });
+    container.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = checkoutFormContent;
+    container.appendChild(wrapper);
 
-            if (!response.ok) throw new Error("Ödeme başlatılamadı.");
+    const scripts = wrapper.getElementsByTagName("script");
+    for (let i = 0; i < scripts.length; i++) {
+      const oldScript = scripts[i];
+      const newScript = document.createElement("script");
+      if (oldScript.src) {
+        newScript.src = oldScript.src;
+      } else {
+        newScript.text = oldScript.innerText;
+      }
+      document.body.appendChild(newScript);
+    }
+  };
 
-            const result: PaymentResponse = await response.json();
+  const handleStartPayment = async () => {
+    if (!state) return;
 
-            if (result.checkoutFormContent) {
-                // Iyzico'nun gönderdiği script içeriğini sayfaya enjekte ediyoruz
-                const checkoutDiv = document.getElementById("iyzipay-checkout-form");
-                if (checkoutDiv) {
-                    // Önceki içeriği temizle
-                    checkoutDiv.innerHTML = result.checkoutFormContent;
+    if (userId === "guest" && !guestAddress.trim()) {
+      setError("Lütfen teslimat adresi giriniz.");
+      return;
+    }
+    if (userId !== "guest" && !selectedAddressId) {
+      setError("Lütfen bir kayıtlı adres seçiniz.");
+      return;
+    }
 
-                    // Script tag'lerini manuel olarak çalıştırmamız gerekebilir
-                    const scripts = checkoutDiv.getElementsByTagName("script");
-                    for (let i = 0; i < scripts.length; i++) {
-                        const script = document.createElement("script");
-                        script.type = "text/javascript";
-                        if (scripts[i].src) {
-                            script.src = scripts[i].src;
-                        } else {
-                            script.textContent = scripts[i].textContent;
-                        }
-                        document.head.appendChild(script);
-                    }
-                }
-            } else if (result.paymentPageUrl) {
-                // Eğer script değil de URL dönerse oraya yönlendir
-                window.location.href = result.paymentPageUrl;
-            }
+    setIsProcessing(true);
+    setError(null);
 
-        } catch (err) {
-            setError("Ödeme sistemiyle bağlantı kurulamadı. Lütfen tekrar deneyin.");
-            console.error(err);
-        } finally {
-            setIsProcessing(false);
-        }
+    // PaymentRequest backend DTO ile birebir uyumlu
+    const paymentRequest = {
+      orderId:   state.orderId,
+      method:    "CREDIT_CARD",
+      amount:    state.amount,
+      currency:  "TRY",
+      provider:  "IYZICO",
+      guestAddress: userId === "guest" ? guestAddress : null,
+      addressId:    userId === "guest" ? 0 : selectedAddressId,
+      // Guest buyer bilgileri — Iyzico Buyer nesnesini doldurmak için
+      guestName:  userId === "guest" ? state.guestName  : null,
+      guestEmail: userId === "guest" ? state.guestEmail : null,
+      guestPhone: userId === "guest" ? state.guestPhone : null,
     };
 
-    if (!state) return null;
+    try {
+      const response = await fetch(`${Config.api.baseUrl}/api/payments/iyzico-start`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(paymentRequest),
+      });
 
-    return (
-        <div className="max-w-2xl mx-auto p-6 md:p-12 font-karla">
-            <button
-                onClick={() => navigate(-1)}
-                className="flex items-center gap-2 text-gray-500 hover:text-blue-600 mb-8 font-bold transition-colors"
-            >
-                <ArrowLeft size={20} /> Vazgeç ve Geri Dön
-            </button>
+      if (!response.ok) throw new Error("Ödeme sistemi yanıt vermiyor.");
 
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white border border-gray-100 rounded-[2.5rem] p-8 shadow-xl text-center"
-            >
-                <div className="flex justify-center mb-6">
-                    <div className="bg-blue-50 p-4 rounded-full">
-                        <CreditCard size={40} className="text-blue-600" />
-                    </div>
-                </div>
+      const result = await response.json();
 
-                <h1 className="text-3xl font-black text-gray-900 mb-2">Ödemeyi Tamamla</h1>
-                <p className="text-gray-500 mb-8 font-medium">
-                    Sipariş numaranız: <span className="text-gray-900 font-bold">#{state.orderId}</span>
-                </p>
+      if (result.checkoutFormContent) {
+        renderIyzicoForm(result.checkoutFormContent);
+      } else if (result.paymentPageUrl) {
+        window.location.href = result.paymentPageUrl;
+      } else {
+        throw new Error("Ödeme formu oluşturulamadı.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || "Ödeme başlatılamadı.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-                <div className="bg-gray-50 rounded-2xl p-6 mb-8 flex justify-between items-center">
-                    <span className="text-gray-600 font-bold uppercase tracking-wider text-sm">Ödenecek Tutar</span>
-                    <span className="text-2xl font-black text-blue-600">
-            {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(state.amount)}
-          </span>
-                </div>
+  if (!state) return null;
 
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-xl flex items-center gap-3 text-sm font-bold">
-                        <AlertCircle size={20} /> {error}
-                    </div>
-                )}
+  return (
+    <div className="max-w-2xl mx-auto p-6 md:p-12">
+      <button
+        onClick={() => navigate(-1)}
+        className="flex items-center gap-2 text-gray-500 mb-6 hover:text-black transition-colors"
+      >
+        <ArrowLeft size={18} /> Geri Dön
+      </button>
 
-                {/* Iyzico Formunun Yerleşeceği Alan */}
-                <div id="iyzipay-checkout-form" className="mb-6"></div>
-
-                {!isProcessing && !document.getElementById("iyzipay-checkout-form")?.innerHTML && (
-                    <button
-                        onClick={handleStartPayment}
-                        className="w-full py-5 bg-slate-900 hover:bg-slate-800 text-white rounded-2xl font-black text-lg flex items-center justify-center gap-3 transition-all transform active:scale-95"
-                    >
-                        ÖDEMEYE BAŞLA <ShieldCheck size={24} />
-                    </button>
-                )}
-
-                {isProcessing && (
-                    <div className="flex flex-col items-center gap-4 py-4">
-                        <Loader2 className="animate-spin text-blue-600" size={40} />
-                        <p className="text-gray-500 font-bold animate-pulse text-sm">Iyzico Güvenli Ödeme Ekranı Yükleniyor...</p>
-                    </div>
-                )}
-
-                <div className="mt-8 flex items-center justify-center gap-6 opacity-40 grayscale">
-                    <img src="https://www.iyzico.com/assets/images/logo.svg" alt="Iyzico" className="h-6" />
-                    <div className="h-4 w-[1px] bg-gray-400"></div>
-                    <span className="text-[10px] font-bold tracking-tighter uppercase text-gray-500">256-Bit SSL Security</span>
-                </div>
-            </motion.div>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white border shadow-xl rounded-3xl p-8 text-center"
+      >
+        <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+          <CreditCard size={32} className="text-blue-600" />
         </div>
-    );
+
+        <h1 className="text-3xl font-black mb-1">Ödeme Paneli</h1>
+        <p className="text-gray-500 mb-8 font-medium">Sipariş Numarası: #{state.orderId}</p>
+
+        {/* KAYITLI KULLANICI — adres seçimi */}
+        {userId !== "guest" && addresses.length > 0 && (
+          <div className="bg-gray-50 p-5 rounded-2xl mb-6 text-left border">
+            <label className="flex items-center gap-2 font-bold mb-3 text-sm text-gray-700">
+              <MapPin size={16} /> Teslimat Adresi Seçin
+            </label>
+            <select
+              className="w-full border p-3 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none"
+              value={selectedAddressId ?? ""}
+              onChange={(e) => setSelectedAddressId(Number(e.target.value))}
+            >
+              <option value="">Lütfen bir adres seçin...</option>
+              {addresses.map((a: any) => (
+                <option key={a.id} value={a.id}>
+                  {a.title || `${a.street} - ${a.city}`}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* MİSAFİR — serbest adres girişi */}
+        {userId === "guest" && (
+          <div className="bg-gray-50 p-5 rounded-2xl mb-6 text-left border">
+            <label className="flex items-center gap-2 font-bold mb-3 text-sm text-gray-700">
+              <MapPin size={16} /> Teslimat Adresi
+            </label>
+            <textarea
+              className="w-full border p-4 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none min-h-[100px]"
+              placeholder="Siparişinizin gönderileceği tam adresi yazınız..."
+              value={guestAddress}
+              onChange={(e) => setGuestAddress(e.target.value)}
+            />
+          </div>
+        )}
+
+        <div className="flex justify-between items-center bg-slate-900 text-white p-5 rounded-2xl mb-8">
+          <span className="text-gray-400 font-medium">Toplam Tutar</span>
+          <span className="text-2xl font-bold text-blue-400">{state.amount.toFixed(2)} TL</span>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 flex items-center gap-2 text-sm font-medium border border-red-100">
+            <AlertCircle size={18} /> {error}
+          </div>
+        )}
+
+        <div id="iyzipay-checkout-form" className="mb-6 overflow-hidden transition-all" />
+
+        {!isProcessing ? (
+          <button
+            type="button"
+            onClick={handleStartPayment}
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl flex items-center justify-center gap-3 font-bold text-lg shadow-lg shadow-blue-200 transition-all active:scale-[0.98]"
+          >
+            Güvenli Ödemeyi Başlat
+            <ShieldCheck size={20} />
+          </button>
+        ) : (
+          <div className="flex flex-col items-center gap-3 py-4">
+            <Loader2 className="animate-spin text-blue-600" size={32} />
+            <p className="text-sm font-medium text-gray-500">Ödeme formu hazırlanıyor...</p>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
 };
 
 export default Iyzico;
